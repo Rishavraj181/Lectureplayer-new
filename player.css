@@ -1,0 +1,668 @@
+:root {
+    --primary-color: #e50914; /* Netflix Red */
+    --secondary-color: #ffffff;
+    --background-color: #141414; /* Dark background */
+    --player-bg-color: #181818; /* Player wrapper background */
+    --controls-background: rgba(20, 20, 20, 0.85); /* Slightly transparent dark */
+    --text-color: #e0e0e0;
+    --icon-color: #d0d0d0;
+    --icon-hover-color: #ffffff;
+    --slider-track-color: #404040;
+    --slider-thumb-color: var(--primary-color);
+    --progress-played-color: var(--primary-color);
+
+    /* Tab and Content Area Styles */
+    --tab-area-bg: #202020; /* Slightly lighter than player bg */
+    --tab-content-bg: #282828; /* Slightly lighter than tab area */
+    --tab-text-color: #aaaaaa; /* Grey text for inactive tabs */
+    --tab-active-text-color: #ffffff; /* White text for active tab */
+    --tab-active-border: var(--primary-color); /* Red border for active tab */
+    --content-text-color: #cccccc;
+    --content-heading-color: #eeeeee;
+    --view-button-bg: var(--primary-color);
+    --view-button-text: var(--secondary-color);
+    --border-color: #444444; /* Subtle border color */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+     font-size: 16px; /* Base font size */
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    /* align-items: center; */ /* Changed for taller content */
+    align-items: flex-start; /* Align to top */
+    min-height: 100vh;
+    /* overflow: hidden; */ /* Removed to allow body scroll if needed, though wrapper should handle it */
+    padding-top: 3vh; /* Add some space at the top */
+    padding-bottom: 3vh; /* Add space at bottom */
+}
+
+.player-wrapper {
+    width: 90%;
+    max-width: 960px; /* Adjust max width as needed */
+    background-color: var(--player-bg-color);
+    border-radius: 8px;
+    /* overflow: hidden; */ /* Changed to allow scrolling within wrapper */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    max-height: 94vh; /* Limit height to allow scrolling */
+    overflow-y: auto; /* Enable vertical scrolling for the wrapper */
+     /* Custom scrollbar (optional) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--slider-track-color) var(--player-bg-color);
+}
+/* Webkit Scrollbar */
+.player-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+.player-wrapper::-webkit-scrollbar-track {
+    background: var(--player-bg-color);
+    border-radius: 8px;
+}
+.player-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--slider-track-color);
+    border-radius: 4px;
+    border: 2px solid var(--player-bg-color);
+}
+
+
+#video-title {
+    font-size: 1.5em;
+    font-weight: 500;
+    padding: 15px 20px;
+    text-align: center;
+    background-color: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+#player-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9; /* Maintain aspect ratio */
+    background-color: #000;
+    overflow: hidden; /* Contain the iframe */
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+#youtube-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none; /* Remove iframe border */
+}
+
+.loading-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.loading-indicator.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid var(--primary-color);
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.overlay-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4em;
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 1.5em;
+    height: 1.5em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    pointer-events: none; /* Initially hidden */
+}
+
+.overlay-play-button:hover {
+    color: var(--secondary-color);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+#player-container:hover .overlay-play-button.visible {
+     opacity: 1;
+     pointer-events: auto; /* Make clickable when visible */
+}
+
+.controls-container {
+    display: flex;
+    align-items: center;
+    padding: 5px 15px; /* Reduced padding */
+    background: var(--controls-background);
+    backdrop-filter: blur(5px); /* Optional: frosted glass effect */
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.3s ease-in-out;
+    position: relative; /* For speed options positioning */
+    z-index: 20; /* Above player content */
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Show controls when hovering player or when paused */
+.player-wrapper:hover .controls-container,
+.player-wrapper.paused .controls-container {
+    opacity: 1;
+}
+
+.control-btn {
+    background: none;
+    border: none;
+    color: var(--icon-color);
+    font-size: 1.1em; /* Slightly smaller icons */
+    cursor: pointer;
+    padding: 8px; /* Slightly smaller padding */
+    margin: 0 4px; /* Reduced margin */
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.control-btn:hover {
+    color: var(--icon-hover-color);
+    transform: scale(1.1);
+}
+
+.seek-bar-container {
+    flex-grow: 1;
+    margin: 0 15px;
+    position: relative; /* For positioning progress bar */
+    height: 20px; /* Container height for alignment */
+    display: flex; /* Align items */
+    align-items: center; /* Vertically center */
+}
+
+#progress-bar {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 6px; /* Match slider track */
+    appearance: none; /* Remove default styling */
+    border: none;
+    background-color: var(--slider-track-color);
+    border-radius: 3px;
+    pointer-events: none; /* Don't interfere with range input */
+}
+
+/* Styling progress bar fill */
+#progress-bar::-webkit-progress-bar {
+    background-color: var(--slider-track-color);
+    border-radius: 3px;
+}
+#progress-bar::-webkit-progress-value {
+    background-color: var(--progress-played-color);
+    border-radius: 3px;
+    transition: width 0.1s linear; /* Smooth progress update */
+}
+#progress-bar::-moz-progress-bar { /* Firefox */
+    background-color: var(--progress-played-color);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+
+#seek-bar {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    appearance: none;
+    background: transparent; /* Make slider background transparent */
+    border-radius: 3px;
+    position: relative; /* To sit above progress */
+    z-index: 1; /* Above progress bar */
+    outline: none;
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+#seek-bar::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    background: transparent; /* Track is handled by progress */
+    border-radius: 3px;
+}
+
+#seek-bar::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--slider-thumb-color);
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -4px; /* Center thumb vertically */
+    transition: transform 0.1s ease;
+}
+#seek-bar:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+
+
+/* Firefox */
+#seek-bar::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    background: transparent; /* Track is handled by progress */
+    border-radius: 3px;
+    border: none;
+}
+
+#seek-bar::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--slider-thumb-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+     transition: transform 0.1s ease;
+}
+#seek-bar:hover::-moz-range-thumb {
+     transform: scale(1.2);
+}
+
+
+.time {
+    font-size: 0.9em;
+    min-width: 90px; /* Prevent layout shifts */
+    text-align: center;
+    margin: 0 5px;
+    user-select: none; /* Prevent text selection */
+}
+
+.volume-container {
+    display: flex;
+    align-items: center;
+    position: relative; /* For potential vertical slider */
+}
+
+#volume-slider {
+    width: 70px;
+    height: 5px;
+    cursor: pointer;
+    appearance: none;
+    background: var(--slider-track-color);
+    border-radius: 3px;
+    outline: none;
+    margin-left: 5px;
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+/* Hide slider initially, show on hover */
+#volume-slider {
+    width: 0;
+    opacity: 0;
+}
+.volume-container:hover #volume-slider {
+    width: 70px;
+    opacity: 1;
+}
+
+
+/* Volume Slider Thumb Styles (similar to seek bar, but smaller) */
+#volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--icon-hover-color);
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -3.5px;
+}
+#volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--icon-hover-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.speed-container {
+    position: relative; /* For dropdown */
+}
+
+#speed-btn {
+    display: flex;
+    align-items: center;
+}
+#speed-btn i { margin-right: 5px; }
+#speed-display { font-size: 0.8em; font-weight: bold;}
+
+.speed-options {
+    position: absolute;
+    bottom: 100%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--controls-background);
+    list-style: none;
+    padding: 5px 0;
+    border-radius: 4px;
+    margin-bottom: 8px; /* Space from controls */
+    display: none; /* Hidden by default */
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    backdrop-filter: blur(5px);
+    width: 70px; /* Fixed width */
+    text-align: center;
+    z-index: 21; /* Above controls */
+}
+
+.speed-container:hover .speed-options {
+    display: block;
+}
+
+.speed-options li {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.speed-options li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.speed-options li.active {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    font-weight: bold;
+}
+
+.error {
+    color: var(--primary-color);
+    text-align: center;
+    padding: 15px;
+    font-weight: bold;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Fullscreen Adjustments */
+.player-wrapper:-webkit-full-screen {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    overflow-y: auto; /* Ensure scroll works in fullscreen too */
+}
+.player-wrapper:-moz-full-screen {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+     overflow-y: auto;
+}
+.player-wrapper:fullscreen {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+     overflow-y: auto;
+}
+
+/* Style fullscreen button icon change */
+.player-wrapper:fullscreen #fullscreen-btn i::before,
+.player-wrapper:-webkit-full-screen #fullscreen-btn i::before,
+.player-wrapper:-moz-full-screen #fullscreen-btn i::before {
+    content: "\f066"; /* Font Awesome compress icon */
+}
+
+
+/* Tabs Styles */
+.content-tabs {
+    background-color: var(--tab-area-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 20px; /* Padding around tabs */
+     flex-shrink: 0; /* Prevent shrinking */
+}
+
+.content-tabs ul {
+    list-style: none;
+    display: flex;
+    gap: 10px; /* Spacing between tabs */
+    overflow-x: auto; /* Allow horizontal scroll if tabs overflow */
+    padding-bottom: 3px; /* Space for focus outline */
+     /* Hide scrollbar */
+    scrollbar-width: none; /* Firefox */
+}
+.content-tabs ul::-webkit-scrollbar { /* Webkit */
+    display: none;
+}
+
+
+.tab-button {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent; /* Default transparent border */
+    padding: 12px 8px; /* Padding for click area */
+    font-size: 0.95em; /* Slightly smaller tabs */
+    font-weight: 500;
+    color: var(--tab-text-color);
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+.tab-button:hover {
+    color: var(--tab-active-text-color);
+}
+
+.tab-button.active {
+    color: var(--tab-active-text-color);
+    border-bottom-color: var(--tab-active-border);
+}
+.tab-button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+    border-radius: 3px;
+}
+
+
+/* Tab Content Area Styles */
+.tab-content-area {
+    padding: 20px 25px; /* Padding inside content area */
+    background-color: var(--tab-content-bg);
+    color: var(--content-text-color);
+     /* Let this area grow if needed, but scrolling handled by wrapper */
+     flex-grow: 1;
+}
+
+.tab-content {
+    display: none; /* Hide all content by default */
+}
+
+.tab-content.active {
+    display: block; /* Show active content */
+    animation: fadeIn 0.5s ease; /* Simple fade-in */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
+.tab-content h2 {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    color: var(--content-heading-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+/* Example Study Material Item Styling */
+.material-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.material-item:last-child {
+    border-bottom: none;
+}
+
+.material-item span {
+    font-size: 0.95em;
+    color: var(--content-text-color);
+    margin-right: 15px;
+}
+
+.view-button {
+    background-color: var(--view-button-bg);
+    color: var(--view-button-text);
+    border: none;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+    flex-shrink: 0; /* Prevent button shrinking */
+}
+
+.view-button:hover {
+    opacity: 0.9;
+}
+
+
+/* Basic Responsiveness */
+@media (max-width: 768px) {
+    #video-title {
+        font-size: 1.2em;
+        padding: 10px 15px;
+    }
+    .controls-container {
+        padding: 5px 10px;
+    }
+    .time {
+        min-width: 75px;
+        font-size: 0.8em;
+    }
+     .control-btn {
+         font-size: 1em;
+         padding: 6px;
+         margin: 0 2px;
+     }
+    #volume-slider {
+        width: 50px;
+    }
+    .volume-container:hover #volume-slider {
+        width: 50px; /* Keep it smaller on hover too */
+    }
+
+     /* Hide speed text on smaller screens maybe? */
+    #speed-display {
+         display: none;}
+    
+    #speed-btn i {
+        margin-right: 3px;
+    }
+    .speed-options {
+        width: 60px;
+    }
+    .speed-options li {
+        font-size: 0.8em;
+        padding: 6px 8px;
+    }
+
+    .tab-button {
+        font-size: 0.9em;
+        padding: 10px 5px;
+    }
+    .content-tabs ul {
+        gap: 5px;
+    }
+    .tab-content-area {
+        padding: 15px 20px;
+    }
+    .tab-content h2 {
+        font-size: 1.2em;
+    }
+
+}
+
+@media (max-width: 480px) {
+    .time {
+         display: none; /* Hide time completely on very small screens */
+    }
+     .volume-container {
+        display: none; /* Hide volume controls */
+     }
+     .speed-container {
+        display: none; /* Hide speed controls */
+     }
+     .seek-bar-container {
+         margin: 0 10px;
+     }
+      .control-btn {
+         margin: 0 5px; /* Increase spacing slightly */
+     }
+
+     .tab-button {
+        font-size: 0.85em;
+        padding: 8px 4px;
+    }
+     .material-item {
+         flex-direction: column; /* Stack text and button */
+         align-items: flex-start;
+     }
+     .material-item span {
+         margin-bottom: 8px; /* Space between text and button */
+         margin-right: 0;
+     }
+}
+
+/* Rating Stars Specific Styles */
+.stars i {
+    transition: color 0.2s ease;
+    margin: 0 2px;
+}
+.stars i:hover {
+    color: orange;
+}
+.stars i.selected {
+    color: orange;
+    font-weight: 900; /* Use solid star */
+}

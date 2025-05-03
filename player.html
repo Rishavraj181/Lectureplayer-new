@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <link rel="stylesheet" href="player.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div class="player-wrapper">
+        <h1 id="video-title">Loading video title...</h1>
+
+        <div id="player-container">
+            <!-- This div will be replaced by the YouTube iframe -->
+            <div id="youtube-player"></div>
+            <div class="loading-indicator hidden" id="loading"> <!-- Start hidden -->
+                <div class="spinner"></div>
+            </div>
+            <div class="overlay-play-button hidden" id="overlay-play"> <!-- Start hidden -->
+                <i class="fas fa-play"></i>
+            </div>
+        </div>
+
+        <div class="controls-container" id="controls">
+            <button id="play-pause-btn" class="control-btn" aria-label="Play/Pause">
+                <i class="fas fa-play"></i>
+            </button>
+
+            <div class="seek-bar-container">
+                 <!-- Background progress -->
+                <progress id="progress-bar" value="0" min="0"></progress>
+                <!-- Actual slider -->
+                <input type="range" id="seek-bar" value="0" min="0" step="0.1" aria-label="Seek slider">
+            </div>
+
+            <span id="time-display" class="time">00:00 / 00:00</span>
+
+            <div class="volume-container">
+                <button id="volume-btn" class="control-btn" aria-label="Mute/Unmute">
+                    <i class="fas fa-volume-high"></i> <!-- Start with high volume icon -->
+                </button>
+                <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume slider">
+            </div>
+
+            <!-- NOTE: Speed controls elements are missing here but referenced in JS/CSS -->
+            <!-- Example:
+            <div class="speed-container">
+                <button id="speed-btn" class="control-btn" aria-label="Playback Speed">
+                    <i class="fas fa-gauge-high"></i>
+                    <span id="speed-display">1x</span>
+                </button>
+                <ul class="speed-options hidden" id="speed-options-list">
+                    <li data-speed="0.5">0.5x</li>
+                    <li data-speed="0.75">0.75x</li>
+                    <li data-speed="1" class="active">1x</li>
+                    <li data-speed="1.25">1.25x</li>
+                    <li data-speed="1.5">1.5x</li>
+                    <li data-speed="2">2x</li>
+                </ul>
+            </div>
+             -->
+
+            <button id="fullscreen-btn" class="control-btn" aria-label="Fullscreen">
+                <i class="fas fa-expand"></i>
+            </button>
+        </div>
+         <p id="error-message" class="error hidden"></p> <!-- Start hidden -->
+
+         <!-- Tab Buttons Area -->
+         <div class="content-tabs">
+             <ul>
+                 <!-- Make sure data-target matches the ID of the content div -->
+                 <li><button class="tab-button active" data-target="study-material-content">Study Material</button></li>
+                 <li><button class="tab-button" data-target="my-notes-content">My Notes</button></li>
+                 <li><button class="tab-button" data-target="ratings-content">Ratings</button></li>
+                 <li><button class="tab-button" data-target="timeline-content">Timeline</button></li>
+                 <li><button class="tab-button" data-target="related-videos-content">Related Videos</button></li>
+             </ul>
+         </div>
+
+         <!-- Tab Content Area -->
+        <div class="tab-content-area">
+            <!-- Ensure IDs match data-target values -->
+            <div id="study-material-content" class="tab-content active">
+                <h2>Study Material</h2>
+                <div id="study-material-list">
+                    <!-- Dynamic content will be loaded here -->
+                    <p class="loading-message">Loading materials...</p>
+                </div>
+            </div>
+            <div id="my-notes-content" class="tab-content">
+                <h2>My Notes</h2>
+                 <textarea placeholder="Write your notes here..." style="width: 95%; height: 150px; background: #333; border: 1px solid #444; color: #ddd; padding: 10px; border-radius: 4px;"></textarea>
+                 <button class="view-button" style="margin-top: 10px;">Save Notes</button>
+            </div>
+             <div id="ratings-content" class="tab-content">
+                 <h2>Ratings</h2>
+                 <p style="color: #ccc;">Rate this video:</p>
+                 <div class="stars" style="font-size: 1.5em; color: #ccc; cursor:pointer;">
+                    <i class="far fa-star" data-value="1"></i>
+                    <i class="far fa-star" data-value="2"></i>
+                    <i class="far fa-star" data-value="3"></i>
+                    <i class="far fa-star" data-value="4"></i>
+                    <i class="far fa-star" data-value="5"></i>
+                 </div>
+                 <p id="rating-feedback" class="hidden" style="margin-top: 10px; font-size: 0.9em; color: #888;"></p> <!-- Start hidden -->
+             </div>
+             <div id="timeline-content" class="tab-content">
+                <h2>Timeline / Chapters</h2>
+                <!-- **** ADDED THIS DIV **** -->
+                <div id="timeline-list">
+                     <p class="loading-message">Loading timeline...</p>
+                </div>
+             </div>
+             <div id="related-videos-content" class="tab-content">
+                <h2>Related Videos</h2>
+                 <div id="related-videos-list">
+                    <!-- Dynamic content will be loaded here -->
+                     <p class="loading-message">Loading related videos...</p>
+                 </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- **** REMOVED SCRIPT TAG FOR video_data.json **** -->
+
+    <!-- YouTube IFrame API -->
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // This global function is required by the YouTube API.
+        // It will be called automatically when the API script is loaded and ready.
+        function onYouTubeIframeAPIReady() {
+            console.log("YT API Ready Callback Fired");
+            // Ensure initializePlayer is defined before calling
+            if (typeof initializePlayer === 'function') {
+                 initializePlayer();
+            } else {
+                // Fallback if player.js hasn't loaded yet (unlikely with script at end)
+                console.warn("initializePlayer not found immediately, waiting for DOMContentLoaded");
+                document.addEventListener('DOMContentLoaded', () => {
+                     if (typeof initializePlayer === 'function') {
+                        initializePlayer();
+                     } else {
+                         console.error("FATAL: initializePlayer function still not found after DOMContentLoaded!");
+                         const errEl = document.getElementById('error-message');
+                         if(errEl) errEl.textContent = "Error loading player script. Cannot initialize player.";
+                     }
+                });
+            }
+        }
+    </script>
+    <!-- Load your player script AFTER the API setup -->
+    <script src="player.js"></script>
+</body>
+</html>

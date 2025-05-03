@@ -1,0 +1,40 @@
+
+
+{
+  "videos":
+{
+    "67-v6ubK38A": { 
+      "studyMaterials": [
+        { "title": "Unit & Dimension Notes (PDF)", "url": "/path/to/your/pdfs/unit_dimension_notes.pdf" },
+        { "title": "Practice Problems Set 1", "url": "/path/to/your/pdfs/unit_dimension_problems_1.pdf" },
+        { "title": "NCERT Chapter Link", "url": "https://ncert.nic.in/textbook.php?keph1=1-8", "external": true }
+      ],
+      "relatedVideos": [
+        { "title": "Next: Vector Analysis", "youtubeId": "VIDEO_ID_2", "baseTitle": "Vector_Analysis" }, 
+        { "title": "Related: Dimensional Analysis Examples", "youtubeId": "VIDEO_ID_3", "baseTitle": "Dimensional_Analysis_Examples" }
+      ],
+      "timeline": [ 
+        { "time": 0, "title": "Start" },
+        { "time": 30, "title": "Introduction & Overview" },
+        { "time": 300, "title": "Explanation of Units" },
+        { "time": 655, "title": "Dimensions Concept" },
+        { "time": 1210, "title": "Example Problem 1" },
+        { "time": 1852, "title": "Summary & Key Takeaways" }
+      ]
+    },
+    "dQw4w9WgXcQ": { 
+      "studyMaterials": [
+         { "title": "Rick's Notes", "url": "/path/to/your/pdfs/rick_notes.pdf" }
+      ],
+      "relatedVideos": [
+         { "title": "How to Rickroll", "youtubeId": "oHg5SJYRHA0", "baseTitle": "How_To_Rickroll" }
+      ],
+      "timeline": [ 
+          { "time": 0, "title": "Never gonna give you up"},
+          { "time": 15, "title": "Never gonna let you down"},
+          { "time": 30, "title": "Never gonna run around"},
+          { "time": 45, "title": "and desert you"}
+      ]
+        }
+      }
+    }
