@@ -15,9 +15,6 @@
         <div id="player-container">
             <!-- This div will be replaced by the YouTube iframe -->
             <div id="youtube-player"></div>
-            <div class="loading-indicator hidden" id="loading"> <!-- Start hidden -->
-                <div class="spinner"></div>
-            </div>
             <div class="overlay-play-button hidden" id="overlay-play"> <!-- Start hidden -->
                 <i class="fas fa-play"></i>
             </div>
@@ -43,19 +40,59 @@
                 </button>
                 <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume slider">
             </div>
-            <div class="speed-container">
-                <button id="speed-btn" class="control-btn" aria-label="Playback Speed">
-                    <i class="fas fa-gauge-high"></i>
-                    <span id="speed-display">1x</span>
+           <!-- Inside div.controls-container -->
+
+            <!-- [Other controls like volume...] -->
+
+            <!-- NEW Settings Button and Menu Structure -->
+            <div class="settings-container">
+                <button id="settings-btn" class="control-btn" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-cog"></i>
                 </button>
-                <ul class="speed-options hidden" id="speed-options-list">
-                    <li data-speed="0.5">0.5x</li>
-                    <li data-speed="0.75">0.75x</li>
-                    <li data-speed="1" class="active">1x</li>
-                    <li data-speed="1.25">1.25x</li>
-                    <li data-speed="1.5">1.5x</li>
-                    <li data-speed="2">2x</li>
-                </ul>
+
+                <!-- Main Settings Menu (Initially Hidden) -->
+                <div class="settings-menu hidden" id="settings-menu" role="menu">
+                    <div class="settings-menu-item" role="menuitem" data-action="open-speed-submenu" tabindex="0">
+                        <span>Playback speed</span>
+                        <span class="setting-value" id="current-speed-display">Normal ></span>
+                    </div>
+                    <div class="settings-menu-item" role="menuitem" data-action="open-quality-submenu" tabindex="0">
+                        <span>Quality</span>
+                        <span class="setting-value" id="current-quality-display">Auto ></span>
+                    </div>
+                </div>
+
+                <!-- Speed Sub-Menu (Initially Hidden) -->
+                <div class="settings-submenu hidden" id="speed-submenu" role="menu">
+                    <div class="settings-submenu-header">
+                        <button class="back-button" data-action="close-submenu" aria-label="Back to settings"><i class="fas fa-chevron-left"></i></button>
+                        <span>Playback speed</span>
+                    </div>
+                    <ul id="speed-options-container">
+                        <!-- Speed options will be added here by JS or hardcoded -->
+                        <li role="menuitemradio" aria-checked="false" data-speed="0.25">0.25x</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="0.5">0.5x</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="0.75">0.75x</li>
+                        <li role="menuitemradio" aria-checked="true" data-speed="1">Normal</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="1.25">1.25x</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="1.5">1.5x</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="1.75">1.75x</li>
+                        <li role="menuitemradio" aria-checked="false" data-speed="2">2x</li>
+                    </ul>
+                </div>
+
+                <!-- Quality Sub-Menu (Initially Hidden) -->
+                 <div class="settings-submenu hidden" id="quality-submenu" role="menu">
+                    <div class="settings-submenu-header">
+                         <button class="back-button" data-action="close-submenu" aria-label="Back to settings"><i class="fas fa-chevron-left"></i></button>
+                         <span>Quality</span>
+                    </div>
+                     <ul id="quality-options-container">
+                         <!-- Quality options will be populated by JS -->
+                         <li class="loading-message">Loading qualities...</li>
+                     </ul>
+                 </div>
+
             </div>
 
             <button id="fullscreen-btn" class="control-btn" aria-label="Fullscreen">

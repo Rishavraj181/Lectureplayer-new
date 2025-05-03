@@ -13,21 +13,26 @@ const videoTitleElement = document.getElementById('video-title');
 const playPauseBtn = document.getElementById('play-pause-btn');
 const playPauseIcon = playPauseBtn?.querySelector('i'); // Use optional chaining ?
 const overlayPlayButton = document.getElementById('overlay-play');
-const loadingIndicator = document.getElementById('loading');
 const seekBar = document.getElementById('seek-bar');
 const progressBar = document.getElementById('progress-bar');
 const timeDisplay = document.getElementById('time-display');
 const volumeBtn = document.getElementById('volume-btn');
 const volumeIcon = volumeBtn?.querySelector('i'); // Use optional chaining ?
 const volumeSlider = document.getElementById('volume-slider');
-// --- Speed Control Elements (Ensure these IDs exist in HTML if used) ---
-const speedBtn = document.getElementById('speed-btn'); // Might be null if HTML missing
-const speedDisplay = document.getElementById('speed-display'); // Might be null
-const speedOptionsList = document.getElementById('speed-options-list'); // Might be null
-// --- ---
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 const controlsContainer = document.getElementById('controls');
 const errorMessageElement = document.getElementById('error-message');
+
+// --- NEW Settings Menu Elements ---
+const settingsBtn = document.getElementById('settings-btn');
+const settingsMenu = document.getElementById('settings-menu');
+const speedSubmenu = document.getElementById('speed-submenu');
+const qualitySubmenu = document.getElementById('quality-submenu');
+const currentSpeedDisplay = document.getElementById('current-speed-display');
+const currentQualityDisplay = document.getElementById('current-quality-display');
+const speedOptionsContainer = document.getElementById('speed-options-container'); // UL for speed li
+const qualityOptionsContainer = document.getElementById('quality-options-container'); // UL for quality li
+// --- END Settings Menu Elements ---
 
 // Tab elements
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -59,39 +64,32 @@ function formatTime(seconds) {
     return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
-function showLoading(show) {
-    if (loadingIndicator) {
-        loadingIndicator.classList.toggle('hidden', !show);
-    }
-}
-
 function showError(message) {
      if (errorMessageElement) {
         errorMessageElement.textContent = message;
         errorMessageElement.classList.remove('hidden');
      }
-     showLoading(false);
      if (controlsContainer) {
         controlsContainer.classList.add('hidden'); // Hide controls on error
         controlsContainer.style.opacity = '0'; // Ensure hidden visually
      }
      if (playerContainer) {
-        // Maybe show a placeholder error image or message in the player area
-        playerContainer.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">${message}</div>`;
+        // Replace player with error message
+        playerContainer.innerHTML = `<div style="color: red; text-align: center; padding: 20px; font-weight: bold; background: #111; height: 100%; display: flex; align-items: center; justify-content: center;">${message}</div>`;
      }
      console.error("Player Error:", message);
+     // Hide menus on error too
+     if (settingsMenu) settingsMenu.classList.add('hidden');
+     if (speedSubmenu) speedSubmenu.classList.add('hidden');
+     if (qualitySubmenu) qualitySubmenu.classList.add('hidden');
+     if (settingsBtn) settingsBtn.setAttribute('aria-expanded', 'false');
 }
 
 // --- Function to Fetch and Populate Data ---
 async function loadDynamicContent(videoId) {
-    // Ensure all list containers exist (check needed elements)
+    // Ensure all list containers exist
     if (!studyMaterialList || !relatedVideosList || !timelineList) {
         console.error("Dynamic content list containers not found! Cannot load data.");
-        // Optionally display errors in the respective tabs if elements are missing
-        if (!studyMaterialList && document.getElementById('study-material-content')) {
-            document.getElementById('study-material-content').innerHTML = '<h2>Study Material</h2><p class="error">Error: Target list area (#study-material-list) missing in HTML.</p>';
-        }
-        // Add similar checks/errors for relatedVideosList and timelineList if needed
         return;
     }
 
@@ -102,126 +100,74 @@ async function loadDynamicContent(videoId) {
 
     try {
         console.log("Fetching video_data.json...");
-        const response = await fetch('video_data.json'); // Fetch the JSON file
+        const response = await fetch('video_data.json');
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status} while fetching video_data.json`);
         }
         const allData = await response.json();
         console.log("Fetched data:", allData);
 
-        // **** CORRECTED ACCESS ****
-        const videoData = allData.videos ? allData.videos[videoId] : null; // Access nested data
+        const videoData = allData.videos ? allData.videos[videoId] : null;
 
         if (!videoData) {
              console.warn(`No data found in video_data.json for video ID: ${videoId}`);
              studyMaterialList.innerHTML = '<p class="info-message">No study materials available for this video.</p>';
              relatedVideosList.innerHTML = '<p class="info-message">No related videos available for this video.</p>';
              timelineList.innerHTML = '<p class="info-message">No timeline available for this video.</p>';
-             return; // Stop further processing if no data for this video
+             return;
         }
 
         // --- Populate Study Materials ---
-        studyMaterialList.innerHTML = ''; // Clear loading message
-        if (videoData.studyMaterials && videoData.studyMaterials.length > 0) {
+        studyMaterialList.innerHTML = '';
+        if (videoData.studyMaterials?.length > 0) {
             videoData.studyMaterials.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'material-item';
-
-                const span = document.createElement('span');
-                span.textContent = item.title || 'Untitled Material'; // Fallback title
-
-                const link = document.createElement('a');
-                link.href = item.url || '#'; // Fallback URL
-                // Open external links and PDFs in new tabs
-                if (item.external || (item.url && (item.url.toLowerCase().endsWith('.pdf') || item.url.startsWith('http')))) {
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer'; // Security best practice
-                }
-
-                const button = document.createElement('button');
-                button.className = 'view-button';
-                button.textContent = 'View';
-
-                link.appendChild(button);
-                div.appendChild(span);
-                div.appendChild(link);
-                studyMaterialList.appendChild(div);
+                const div = document.createElement('div'); div.className = 'material-item';
+                const span = document.createElement('span'); span.textContent = item.title || 'Untitled Material';
+                const link = document.createElement('a'); link.href = item.url || '#';
+                if (item.external || (item.url && (item.url.toLowerCase().endsWith('.pdf') || item.url.startsWith('http')))) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+                const button = document.createElement('button'); button.className = 'view-button'; button.textContent = 'View';
+                link.appendChild(button); div.appendChild(span); div.appendChild(link); studyMaterialList.appendChild(div);
             });
-        } else {
-            studyMaterialList.innerHTML = '<p class="info-message">No study materials available for this video.</p>';
-        }
+        } else { studyMaterialList.innerHTML = '<p class="info-message">No study materials available.</p>'; }
 
         // --- Populate Related Videos ---
-        relatedVideosList.innerHTML = ''; // Clear loading message
-        if (videoData.relatedVideos && videoData.relatedVideos.length > 0) {
+        relatedVideosList.innerHTML = '';
+        if (videoData.relatedVideos?.length > 0) {
             videoData.relatedVideos.forEach(item => {
-                if (!item.youtubeId || !item.title) {
-                    console.warn("Skipping related video item due to missing data:", item);
-                    return; // Skip incomplete items
-                }
-                const div = document.createElement('div');
-                div.className = 'material-item'; // Re-use styling
-
-                const span = document.createElement('span');
-                span.textContent = item.title;
-
-                // Build URL for the player page with the related video ID and title
+                if (!item.youtubeId || !item.title) { console.warn("Skipping related video:", item); return; }
+                const div = document.createElement('div'); div.className = 'material-item';
+                const span = document.createElement('span'); span.textContent = item.title;
                 const playerUrl = new URL(window.location.pathname, window.location.origin);
                 playerUrl.searchParams.set('youtubeId', item.youtubeId);
-                // Use baseTitle if present, otherwise use the item title for the URL param (replace spaces)
                 const urlTitle = item.baseTitle || item.title;
                 playerUrl.searchParams.set('title', urlTitle.replace(/ /g, '_'));
-
-                const link = document.createElement('a');
-                link.href = playerUrl.toString(); // Link to the player page
-
-                const button = document.createElement('button');
-                button.className = 'view-button';
-                button.textContent = 'Watch';
-
-                link.appendChild(button);
-                div.appendChild(span);
-                div.appendChild(link);
-                relatedVideosList.appendChild(div);
+                const link = document.createElement('a'); link.href = playerUrl.toString();
+                const button = document.createElement('button'); button.className = 'view-button'; button.textContent = 'Watch';
+                link.appendChild(button); div.appendChild(span); div.appendChild(link); relatedVideosList.appendChild(div);
             });
-        } else {
-            relatedVideosList.innerHTML = '<p class="info-message">No related videos available for this video.</p>';
-        }
+        } else { relatedVideosList.innerHTML = '<p class="info-message">No related videos available.</p>'; }
 
-        // --- Populate Timeline / Chapters --- //
-        timelineList.innerHTML = ''; // Clear loading message
-        if (videoData.timeline && videoData.timeline.length > 0) {
+        // --- Populate Timeline / Chapters ---
+        timelineList.innerHTML = '';
+        if (videoData.timeline?.length > 0) {
             videoData.timeline.forEach(chapter => {
-                 if (typeof chapter.time !== 'number' || !chapter.title) {
-                     console.warn("Skipping invalid timeline chapter:", chapter);
-                     return; // Skip malformed chapter
-                 }
-                const div = document.createElement('div');
-                div.className = 'timeline-item'; // Add class for styling and event listener
-                div.dataset.time = chapter.time; // Store time in data attribute
-                div.textContent = `${formatTime(chapter.time)} - ${chapter.title}`;
-                div.setAttribute('role', 'button'); // Accessibility
-                div.tabIndex = 0; // Make focusable
-
+                 if (typeof chapter.time !== 'number' || !chapter.title) { console.warn("Skipping invalid timeline chapter:", chapter); return; }
+                const div = document.createElement('div'); div.className = 'timeline-item'; div.dataset.time = chapter.time;
+                div.textContent = `${formatTime(chapter.time)} - ${chapter.title}`; div.setAttribute('role', 'button'); div.tabIndex = 0;
                 timelineList.appendChild(div);
             });
-        } else {
-            timelineList.innerHTML = '<p class="info-message">No timeline available for this video.</p>';
-        }
-
+        } else { timelineList.innerHTML = '<p class="info-message">No timeline available.</p>'; }
 
     } catch (error) {
         console.error('Error loading or processing dynamic content:', error);
-        // Display errors in the UI
-        studyMaterialList.innerHTML = `<p class="error">Error loading materials: ${error.message}</p>`;
-        relatedVideosList.innerHTML = `<p class="error">Error loading related videos: ${error.message}</p>`;
-        timelineList.innerHTML = `<p class="error">Error loading timeline: ${error.message}</p>`;
+        if (studyMaterialList) studyMaterialList.innerHTML = `<p class="error">Error loading materials: ${error.message}</p>`;
+        if (relatedVideosList) relatedVideosList.innerHTML = `<p class="error">Error loading related videos: ${error.message}</p>`;
+        if (timelineList) timelineList.innerHTML = `<p class="error">Error loading timeline: ${error.message}</p>`;
     }
 }
 
 
 // --- Player Initialization ---
-
 window.initializePlayer = function() {
     console.log("Initializing player...");
     currentVideoId = getUrlParameter('youtubeId');
@@ -230,7 +176,7 @@ window.initializePlayer = function() {
     if (titleParam) {
         currentVideoTitle = titleParam.replace(/_/g, ' ');
         if (videoTitleElement) videoTitleElement.textContent = currentVideoTitle;
-        document.title = currentVideoTitle; // Update page title
+        document.title = currentVideoTitle;
     } else {
          if (videoTitleElement) videoTitleElement.textContent = "Video Player";
          document.title = "Video Player";
@@ -241,11 +187,9 @@ window.initializePlayer = function() {
         return;
     }
 
-    // Start loading dynamic content ASAP (runs async)
     loadDynamicContent(currentVideoId);
 
-     showLoading(true);
-     if (errorMessageElement) errorMessageElement.classList.add('hidden'); // Hide previous errors
+    if (errorMessageElement) errorMessageElement.classList.add('hidden');
 
     try {
         if (!document.getElementById('youtube-player')) {
@@ -256,17 +200,9 @@ window.initializePlayer = function() {
             height: '100%',
             width: '100%',
             videoId: currentVideoId,
-            // **** ADDED/UPDATED playerVars ****
             playerVars: {
-                'playsinline': 1,       // Essential for mobile inline playback
-                'autoplay': 0,          // Don't autoplay
-                'controls': 0,          // <--- HIDE YouTube's default controls
-                'rel': 0,               // Don't show related videos suggested by YouTube
-                'showinfo': 0,          // Deprecated, but include for older compatibility
-                'modestbranding': 1,    // Less prominent YouTube logo
-                'iv_load_policy': 3,    // Don't show video annotations by default
-                'disablekb': 1          // Disable YT keyboard shortcuts if using custom ones
-                // 'origin': window.location.origin // Might be needed for some embeds
+                'playsinline': 1, 'autoplay': 0, 'controls': 0, 'rel': 0,
+                'showinfo': 0, 'modestbranding': 1, 'iv_load_policy': 3, 'disablekb': 1
             },
             events: {
                 'onReady': onPlayerReady,
@@ -276,136 +212,150 @@ window.initializePlayer = function() {
         });
     } catch (error) {
          showError(`Failed to create YouTube player instance: ${error.message}`);
-         console.error(error); // Log full error
+         console.error(error);
     }
 };
 
 // --- YouTube Player Event Handlers ---
-
 function onPlayerReady(event) {
     console.log("Player Ready:", currentVideoId);
-    showLoading(false);
-    if (overlayPlayButton) overlayPlayButton.classList.remove('hidden'); // Show overlay play button now
-    if (controlsContainer) controlsContainer.classList.remove('hidden'); // Show custom controls
 
-    // Make sure elements exist before setting up listeners or updating UI
-    if (playPauseBtn && seekBar && timeDisplay && volumeBtn && volumeSlider && fullscreenBtn && tabButtons.length > 0 && timelineList) {
+    if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
+    if (controlsContainer) controlsContainer.classList.remove('hidden');
+
+    // Check if essential elements exist before setting up listeners
+    const essentialElements = [
+        playPauseBtn, seekBar, timeDisplay, volumeBtn, volumeSlider,
+        fullscreenBtn, playerContainer, settingsBtn, settingsMenu,
+        speedSubmenu, qualitySubmenu, speedOptionsContainer, qualityOptionsContainer
+    ];
+    if (essentialElements.every(el => el) && tabButtons.length > 0 && timelineList) {
          setupEventListeners();
+         console.log("All essential elements found. Listeners set up.");
     } else {
-        console.error("One or more essential control/UI elements missing, cannot setup listeners correctly.");
-        // Consider showing an error message if core controls are missing
+        console.error("One or more essential control/UI elements missing. Some functionality may be disabled.");
+        // Log missing elements for easier debugging
+        essentialElements.forEach(el => {
+            if (!el) console.error("Missing element:", el === playPauseBtn ? 'playPauseBtn' : el === seekBar ? 'seekBar' : /* ... add others if needed */ 'an essential element');
+        });
+         if (!settingsBtn) console.error("Missing: settingsBtn");
+         if (!settingsMenu) console.error("Missing: settingsMenu");
+         if (!speedSubmenu) console.error("Missing: speedSubmenu");
+         if (!qualitySubmenu) console.error("Missing: qualitySubmenu");
+         if (!speedOptionsContainer) console.error("Missing: speedOptionsContainer");
+         if (!qualityOptionsContainer) console.error("Missing: qualityOptionsContainer");
     }
 
+    // Initial UI Updates
     if (player && typeof player.getVolume === 'function') {
         updateVolumeUI(player.getVolume(), player.isMuted());
     }
-     if (player && typeof player.getPlaybackRate === 'function' && speedDisplay) { // Check speedDisplay too
-        updatePlaybackSpeedUI(player.getPlaybackRate());
-     }
-
+    if (player && typeof player.getPlaybackRate === 'function') {
+        updateSpeedDisplay(); // Update initial speed display
+    }
+    if (player && typeof player.getPlaybackQuality === 'function') {
+        updateQualityDisplay(); // Update initial quality display
+    }
 
     // Get duration with fallback
     const duration = player.getDuration();
     if (duration && duration > 0) {
          updateDurationDisplay(duration);
-         startProgressUpdater(); // Start updater only when duration is known
     } else {
-         console.warn("Duration not available immediately in onReady. Will try again on state change or after delay.");
+         console.warn("Duration not available immediately in onReady. Will try again later.");
          if(timeDisplay) timeDisplay.textContent = `00:00 / --:--`;
-         // Fallback check after a short delay
          setTimeout(() => {
-             const delayedDuration = player.getDuration();
+             const delayedDuration = player?.getDuration();
              if (delayedDuration && delayedDuration > 0) {
                  console.log("Duration obtained after delay:", delayedDuration);
                  updateDurationDisplay(delayedDuration);
-                 startProgressUpdater(); // Start updater now
              } else {
                  console.error("Failed to get duration even after delay.");
+                 // Attempt to populate quality options anyway, API might still work
+                 populateQualityOptions();
              }
-         }, 1000);
+         }, 1500);
     }
 }
 
 function updateDurationDisplay(duration) {
-    if (isNaN(duration) || duration <= 0 || !seekBar || !progressBar || !timeDisplay) return; // Add checks
+    if (isNaN(duration) || duration <= 0 || !seekBar || !progressBar || !timeDisplay) return;
     seekBar.max = duration;
     progressBar.max = duration;
     const currentTime = player?.getCurrentTime() || 0;
     timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
 }
 
-
 function onPlayerStateChange(event) {
-    console.log("Player State Change:", event.data, YT.PlayerState);
+    console.log(`Player State Change Detected: ${event.data}`); // Log state first
 
-     // Try to get duration again if it wasn't ready before
-     if ( (!seekBar.max || seekBar.max <= 0) && (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) ) {
-        const duration = player.getDuration();
-        if (duration > 0) {
+    // Try to get duration again if it wasn't ready before
+    if ( (!seekBar.max || seekBar.max <= 0) && (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.CUED) ) {
+        const duration = player?.getDuration();
+        if (duration && duration > 0) {
+            console.log("Updating duration from state change handler.");
             updateDurationDisplay(duration);
-            if (!progressUpdateInterval) startProgressUpdater(); // Start if not already started
         }
-     }
-
+    }
 
     switch (event.data) {
-        case YT.PlayerState.PLAYING:
-             if(playPauseIcon) {
-                playPauseIcon.classList.remove('fa-play');
-                playPauseIcon.classList.add('fa-pause');
-             }
+        case YT.PlayerState.PLAYING: // 1
+             if(playPauseIcon) { playPauseIcon.className = 'fas fa-pause'; } // Ensure correct icon class
              if (overlayPlayButton) overlayPlayButton.classList.add('hidden');
-             if (playerWrapper) playerWrapper.classList.remove('paused'); // For CSS hooks
+             if (playerWrapper) playerWrapper.classList.remove('paused');
             startProgressUpdater();
-            hideControlsAfterTimeout(); // Start timer to hide controls
+            hideControlsAfterTimeout();
             break;
-        case YT.PlayerState.PAUSED:
-             if(playPauseIcon) {
-                playPauseIcon.classList.remove('fa-pause');
-                playPauseIcon.classList.add('fa-play');
-             }
+
+        case YT.PlayerState.PAUSED: // 2
+             if(playPauseIcon) { playPauseIcon.className = 'fas fa-play'; } // Ensure correct icon class
             if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
-            if (playerWrapper) playerWrapper.classList.add('paused'); // For CSS hooks
-            stopProgressUpdater();
-            showControls(); // Keep controls visible when paused
-            break;
-        case YT.PlayerState.ENDED:
-             if(playPauseIcon) {
-                playPauseIcon.classList.remove('fa-pause');
-                playPauseIcon.classList.add('fa-play');
-             }
-            if (overlayPlayButton) overlayPlayButton.classList.remove('hidden'); // Show overlay to replay?
             if (playerWrapper) playerWrapper.classList.add('paused');
             stopProgressUpdater();
-            // Reset progress to beginning
+            showControls(); // Keep controls visible
+            break;
+
+        case YT.PlayerState.ENDED: // 0
+             if(playPauseIcon) { playPauseIcon.className = 'fas fa-play'; } // Ensure correct icon class
+            if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
+            if (playerWrapper) playerWrapper.classList.add('paused');
+            stopProgressUpdater();
             if (seekBar) seekBar.value = 0;
             if (progressBar) progressBar.value = 0;
             const endDuration = player?.getDuration() || 0;
             if (timeDisplay) timeDisplay.textContent = `00:00 / ${formatTime(endDuration)}`;
-            showControls(); // Keep controls visible at end
+            showControls();
             break;
-        case YT.PlayerState.BUFFERING:
-            showLoading(true);
+
+        case YT.PlayerState.BUFFERING: // 3
             stopProgressUpdater(); // Pause updates while buffering
             break;
-        case YT.PlayerState.CUED: // Video loaded, ready to play
-            showLoading(false);
-             if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
-             updateDurationDisplay(player.getDuration()); // Update duration display if cued
+
+        case YT.PlayerState.CUED: // 5
+            if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
+            const cuedDuration = player?.getDuration();
+            if (cuedDuration > 0) updateDurationDisplay(cuedDuration);
+            // Quality might be known or changed by now
+            if (player && typeof player.getPlaybackQuality === 'function') updateQualityDisplay();
             break;
-         case YT.PlayerState.UNSTARTED: // Initial state
-            showLoading(false); // Often transitions too fast, hide loading unless buffering happens
+
+         case YT.PlayerState.UNSTARTED: // -1
             if (overlayPlayButton) overlayPlayButton.classList.remove('hidden');
             break;
 
+        default:
+             console.log(`Unhandled player state: ${event.data}`);
+    }
+
+    // Update quality display frequently as it can change automatically
+    if (player && typeof player.getPlaybackQuality === 'function') {
+        setTimeout(updateQualityDisplay, 150); // Short delay for API update
     }
 }
 
 function onPlayerError(event) {
     stopProgressUpdater();
-    showLoading(false);
     let errorMessage = `An error occurred (Code: ${event.data}).`;
-     // Provide more specific messages based on YouTube API error codes
     switch (event.data) {
         case 2: errorMessage = "Error: Invalid video ID or request parameter."; break;
         case 5: errorMessage = "Error: Cannot play video in the HTML5 player."; break;
@@ -414,22 +364,26 @@ function onPlayerError(event) {
         case 150: errorMessage = "Error: Video playback is restricted or disallowed by the owner."; break;
         default: errorMessage = `An unknown player error occurred (Code: ${event.data}).`;
     }
-     console.error("YouTube Player Error Event:", event);
+    console.error("YouTube Player Error Event:", event);
     showError(errorMessage);
 }
 
 // --- Progress Bar Update ---
 function startProgressUpdater() {
-    if (progressUpdateInterval) return; // Already running
-    stopProgressUpdater(); // Clear any residual interval
+    if (progressUpdateInterval) return;
+    stopProgressUpdater(); // Clear existing interval just in case
+    const duration = player?.getDuration();
+    if (!duration || duration <= 0) {
+        console.warn("Cannot start progress updater, duration unknown or zero.");
+        return;
+    }
     console.log("Starting progress updater");
-    updateProgressBar(); // Update once immediately
-    progressUpdateInterval = setInterval(updateProgressBar, 500); // Update ~twice per second
+    updateProgressBar(); // Initial update
+    progressUpdateInterval = setInterval(updateProgressBar, 500);
 }
 
 function stopProgressUpdater() {
     if (progressUpdateInterval) {
-        // console.log("Stopping progress updater");
         clearInterval(progressUpdateInterval);
         progressUpdateInterval = null;
     }
@@ -437,20 +391,18 @@ function stopProgressUpdater() {
 
 function updateProgressBar() {
     if (!player || typeof player.getCurrentTime !== 'function' || typeof player.getDuration !== 'function') {
-        // console.warn("Cannot update progress bar, player not ready or methods unavailable.");
         return;
     }
     const currentTime = player.getCurrentTime();
     const duration = player.getDuration();
 
-    // Ensure duration is valid and elements exist
     if (!isNaN(currentTime) && !isNaN(duration) && duration > 0 && seekBar && progressBar && timeDisplay) {
         seekBar.value = currentTime;
-        progressBar.value = currentTime; // Update visual progress
+        progressBar.value = currentTime;
         timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
     } else if (!isNaN(currentTime) && timeDisplay) {
-         // Handle cases like live streams (duration=0) or if duration isn't known yet
-         if (timeDisplay.textContent.endsWith('/ --:--') || duration <= 0) {
+         // Handle case where duration is still unknown/zero
+         if (timeDisplay.textContent.includes('/ --:--') || duration <= 0) {
              timeDisplay.textContent = `${formatTime(currentTime)} / --:--`;
          }
     }
@@ -458,120 +410,106 @@ function updateProgressBar() {
 
 // --- UI Update Functions ---
 function updateVolumeUI(volume, muted) {
-    if (!volumeSlider || !volumeIcon) return;
+    if (!volumeSlider || !volumeIcon || !volumeBtn) return;
     volumeSlider.value = muted ? 0 : volume;
+    const label = muted || volume === 0 ? 'Unmute' : 'Mute';
+    volumeBtn.setAttribute('aria-label', label);
+
     if (muted || volume === 0) {
-        volumeIcon.classList.remove('fa-volume-high', 'fa-volume-low');
-        volumeIcon.classList.add('fa-volume-xmark');
-        volumeBtn.setAttribute('aria-label', 'Unmute');
+        volumeIcon.className = 'fas fa-volume-xmark'; // Use full classes
     } else if (volume < 40) {
-         volumeIcon.classList.remove('fa-volume-high', 'fa-volume-xmark');
-        volumeIcon.classList.add('fa-volume-low');
-         volumeBtn.setAttribute('aria-label', 'Mute');
+        volumeIcon.className = 'fas fa-volume-low'; // Use full classes
     } else {
-        volumeIcon.classList.remove('fa-volume-low', 'fa-volume-xmark');
-        volumeIcon.classList.add('fa-volume-high');
-         volumeBtn.setAttribute('aria-label', 'Mute');
+        volumeIcon.className = 'fas fa-volume-high'; // Use full classes
     }
 }
 
-function updatePlaybackSpeedUI(speed) {
-    // Check if speed control elements exist
-    if (!speedDisplay || !speedOptionsList) return;
+// NEW function to update speed display in main menu and highlight in submenu
+function updateSpeedDisplay() {
+    if (!player || typeof player.getPlaybackRate !== 'function' || !currentSpeedDisplay || !speedOptionsContainer) {
+        console.warn("Cannot update speed display: Player or elements not ready.");
+        return;
+    }
 
-    speedDisplay.textContent = `${speed}x`;
-    // Update active state in the speed options list
-    speedOptionsList.querySelectorAll('li').forEach(li => {
-        // Use tolerance for float comparison
-        li.classList.toggle('active', Math.abs(parseFloat(li.dataset.speed) - speed) < 0.01);
+    const currentRate = player.getPlaybackRate();
+    const displayRate = currentRate === 1 ? 'Normal' : `${currentRate}x`;
+    currentSpeedDisplay.textContent = `${displayRate} >`;
+
+    // Update active state in submenu
+    speedOptionsContainer.querySelectorAll('li').forEach(li => {
+        const liSpeed = parseFloat(li.dataset.speed);
+        const isActive = Math.abs(liSpeed - currentRate) < 0.01;
+        li.classList.toggle('active', isActive);
+        li.setAttribute('aria-checked', String(isActive)); // ARIA state expects string "true"/"false"
     });
+    console.log(`UI Updated: Speed display set to ${displayRate}`);
+}
+
+// NEW function to update quality display in main menu and highlight in submenu
+function updateQualityDisplay() {
+    if (!player || typeof player.getPlaybackQuality !== 'function' || !currentQualityDisplay || !qualityOptionsContainer) {
+        console.warn("Cannot update quality display: Player or elements not ready.");
+        if (currentQualityDisplay) currentQualityDisplay.textContent = 'Auto >'; // Default fallback display
+        return;
+    }
+
+    const currentQuality = player.getPlaybackQuality(); // e.g., "hd720", "auto"
+
+    // Map quality levels to human-readable names
+    const qualityMap = {
+        'hd2160': '2160p', 'hd1440': '1440p', 'hd1080': '1080p', 'hd720': '720p',
+        'large': '480p', 'medium': '360p', 'small': '240p', 'tiny': '144p', 'auto': 'Auto'
+    };
+    const displayQuality = qualityMap[currentQuality] || currentQuality; // Fallback to raw name if not in map
+    currentQualityDisplay.textContent = `${displayQuality} >`;
+
+    // Update active state in quality submenu (if populated)
+    qualityOptionsContainer.querySelectorAll('li').forEach(li => {
+        const liQuality = li.dataset.quality;
+        const isActive = liQuality === currentQuality;
+        li.classList.toggle('active', isActive);
+        li.setAttribute('aria-checked', String(isActive));
+    });
+     console.log(`UI Updated: Quality display set to ${displayQuality} (${currentQuality})`);
 }
 
 // --- Event Listeners Setup ---
 function setupEventListeners() {
     console.log("Setting up event listeners...");
 
-    // --- Play/Pause ---
+    // --- Basic Controls ---
     if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
     if (overlayPlayButton) overlayPlayButton.addEventListener('click', togglePlayPause);
-    // Optional: click video area to toggle play/pause (can sometimes interfere)
-    // if (playerContainer) playerContainer.addEventListener('click', (e) => {
-    //    if (e.target === playerContainer || e.target === overlayPlayButton || e.target.closest('#youtube-player')) {
-    //       togglePlayPause();
-    //     }
-    // });
-
-    // --- Seek Bar ---
-    if (seekBar) {
-        seekBar.addEventListener('input', handleSeekInput); // Update time display while scrubbing
-        seekBar.addEventListener('change', handleSeekChange); // Seek when scrubbing finishes
-    }
-
-    // --- Volume ---
+    if (seekBar) { seekBar.addEventListener('input', handleSeekInput); seekBar.addEventListener('change', handleSeekChange); }
     if (volumeBtn) volumeBtn.addEventListener('click', toggleMute);
     if (volumeSlider) volumeSlider.addEventListener('input', handleVolumeChange);
-
-    // --- Speed --- (Only add listeners if elements exist)
-    if (speedBtn && speedOptionsList) {
-        speedBtn.addEventListener('click', () => {
-            speedOptionsList.classList.toggle('hidden');
-        });
-        speedOptionsList.addEventListener('click', handleSpeedChange);
-        // Hide speed options if clicking elsewhere
-        document.addEventListener('click', (event) => {
-            if (!speedBtn.contains(event.target) && !speedOptionsList.contains(event.target)) {
-                speedOptionsList.classList.add('hidden');
-            }
-        });
-    }
-
-    // --- Fullscreen ---
     if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
-    // Listen for fullscreen changes on the document
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange); // Safari
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange); // Firefox
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange); // IE/Edge
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     // --- Tab Switching Logic ---
     if (tabButtons.length > 0 && tabContents.length > 0) {
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
-                const targetTabId = button.dataset.target; // e.g., "study-material-content"
-                 if (!targetTabId) {
-                     console.warn("Tab button missing data-target attribute:", button);
-                     return;
-                 }
+                const targetTabId = button.dataset.target;
+                if (!targetTabId) { console.warn("Tab button missing data-target attribute:", button); return; }
                 const targetTabContent = document.getElementById(targetTabId);
-
-                console.log(`Tab clicked: Target ID = ${targetTabId}`); // Debug log
-
-                // Deactivate all buttons and hide all content first
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabContents.forEach(content => content.classList.remove('active'));
-
-                // Activate the clicked button and show the corresponding content
                 button.classList.add('active');
-                if (targetTabContent) {
-                    targetTabContent.classList.add('active');
-                    console.log(`Activated content:`, targetTabContent); // Debug log
-                } else {
-                    console.warn(`Tab content element with ID '${targetTabId}' not found.`);
-                }
+                if (targetTabContent) targetTabContent.classList.add('active');
+                else console.warn(`Tab content element with ID '${targetTabId}' not found.`);
             });
         });
-    } else {
-        console.warn("Tab buttons or content elements not found, tab switching disabled.");
-    }
-
+    } else { console.warn("Tab buttons or content elements not found, tab switching disabled."); }
 
     // --- Timeline Click-to-Seek Logic ---
     if (timelineList) {
         timelineList.addEventListener('click', handleTimelineItemClick);
-        timelineList.addEventListener('keydown', handleTimelineItemKeydown); // For accessibility
-    } else {
-        console.warn("Timeline list container (#timeline-list) not found. Timeline seeking disabled.");
-    }
+        timelineList.addEventListener('keydown', handleTimelineItemKeydown);
+    } else { console.warn("Timeline list container (#timeline-list) not found. Timeline seeking disabled."); }
 
      // --- Rating Stars Logic ---
      if (ratingStars.length > 0 && ratingFeedback) {
@@ -584,21 +522,233 @@ function setupEventListeners() {
 
     // --- Hide/Show Controls Logic ---
     if (playerWrapper && controlsContainer) {
-        // Show controls on mouse move over the entire player wrapper
         playerWrapper.addEventListener('mousemove', showControls);
-        // Keep controls visible when mouse is directly over them
         controlsContainer.addEventListener('mouseenter', showControls);
-        // Restart hide timer when mouse leaves controls (but is still over wrapper)
         controlsContainer.addEventListener('mouseleave', hideControlsAfterTimeout);
-         // Also show on focus events within the wrapper (accessibility)
-         playerWrapper.addEventListener('focusin', showControls);
-         playerWrapper.addEventListener('focusout', hideControlsAfterTimeout);
-
-        // Initial setup: show controls briefly then start hide timer
-        showControls();
+        playerWrapper.addEventListener('focusin', showControls); // Show on focus within wrapper
+        playerWrapper.addEventListener('focusout', hideControlsAfterTimeout); // Hide potentially after focus leaves
+        showControls(); // Initial setup
         hideControlsAfterTimeout();
     }
+
+    // --- Click/Double-Click on Video Area ---
+    if (playerContainer) {
+        playerContainer.addEventListener('click', handleVideoAreaClick);
+        playerContainer.addEventListener('dblclick', handleVideoAreaDoubleClick);
+    } else { console.error("playerContainer missing, cannot add click/dblclick listeners."); }
+
+    // --- NEW Settings Menu Logic ---
+    if (settingsBtn && settingsMenu && speedSubmenu && qualitySubmenu && speedOptionsContainer && qualityOptionsContainer) {
+
+        // Toggle main settings menu
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click listener below
+            const isHidden = settingsMenu.classList.toggle('hidden');
+            settingsBtn.setAttribute('aria-expanded', String(!isHidden));
+            // Always hide submenus when toggling main menu
+            speedSubmenu.classList.add('hidden');
+            qualitySubmenu.classList.add('hidden');
+            console.log(`Settings menu toggled: ${isHidden ? 'hidden' : 'visible'}`);
+        });
+
+        // Handle clicks within the main menu (to open submenus)
+        settingsMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-action]');
+            if (!item) return; // Clicked inside menu but not on an action item
+            e.stopPropagation(); // Prevent document click listener
+
+            const action = item.dataset.action;
+            settingsMenu.classList.add('hidden'); // Hide main menu after click
+            settingsBtn.setAttribute('aria-expanded', 'false');
+
+            if (action === 'open-speed-submenu') {
+                console.log("Opening speed submenu");
+                updateSpeedDisplay(); // Ensure display is current
+                speedSubmenu.classList.remove('hidden');
+            } else if (action === 'open-quality-submenu') {
+                console.log("Opening quality submenu");
+                populateQualityOptions(); // Populate/Repopulate before showing
+                qualitySubmenu.classList.remove('hidden');
+            }
+        });
+
+        // Handle clicks within the speed submenu
+        speedSubmenu.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click listener
+            const target = e.target.closest('[data-action], li[data-speed]');
+            if (!target) return;
+
+            if (target.dataset.action === 'close-submenu') {
+                console.log("Closing speed submenu, returning to main");
+                speedSubmenu.classList.add('hidden');
+                settingsMenu.classList.remove('hidden');
+                settingsBtn.setAttribute('aria-expanded', 'true');
+            } else if (target.dataset.speed) {
+                const speed = parseFloat(target.dataset.speed);
+                if (!isNaN(speed) && player && typeof player.setPlaybackRate === 'function') {
+                    console.log(`Setting playback speed to: ${speed}`);
+                    player.setPlaybackRate(speed);
+                    updateSpeedDisplay();
+                    speedSubmenu.classList.add('hidden'); // Close after selection
+                    settingsBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+
+         // Handle clicks within the quality submenu
+        qualitySubmenu.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click listener
+            const target = e.target.closest('[data-action], li[data-quality]');
+            if (!target) return;
+
+            if (target.dataset.action === 'close-submenu') {
+                console.log("Closing quality submenu, returning to main");
+                qualitySubmenu.classList.add('hidden');
+                settingsMenu.classList.remove('hidden');
+                settingsBtn.setAttribute('aria-expanded', 'true');
+            } else if (target.dataset.quality) {
+                const quality = target.dataset.quality;
+                if (player && typeof player.setPlaybackQuality === 'function') {
+                    console.log(`Requesting quality change to: ${quality}`);
+                    player.setPlaybackQuality(quality);
+                    // Don't call updateQualityDisplay() immediately here.
+                    // Let onPlayerStateChange handle the update after the API confirms.
+                    qualitySubmenu.classList.add('hidden'); // Close after selection
+                    settingsBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+
+        // Close ALL menus if clicking anywhere else on the document
+        document.addEventListener('click', (e) => {
+            // Check if the click is outside the button AND all menus
+            if (!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target) && !speedSubmenu.contains(e.target) && !qualitySubmenu.contains(e.target)) {
+                // Only log if a menu was actually open
+                if (!settingsMenu.classList.contains('hidden') || !speedSubmenu.classList.contains('hidden') || !qualitySubmenu.classList.contains('hidden')) {
+                    console.log("Clicked outside settings menus, closing all.");
+                }
+                settingsMenu.classList.add('hidden');
+                speedSubmenu.classList.add('hidden');
+                qualitySubmenu.classList.add('hidden');
+                settingsBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Add keydown listeners for basic menu navigation (optional but good for a11y)
+        settingsMenu.addEventListener('keydown', handleMenuKeydown);
+        speedSubmenu.addEventListener('keydown', handleMenuKeydown);
+        qualitySubmenu.addEventListener('keydown', handleMenuKeydown);
+
+    } else {
+        console.warn("Settings menu elements not found, settings functionality disabled.");
+        if (settingsBtn) settingsBtn.style.display = 'none'; // Hide the button if menus are missing
+    }
 }
+
+// --- NEW Function to Populate Quality Options ---
+function populateQualityOptions() {
+    if (!player || typeof player.getAvailableQualityLevels !== 'function' || !qualityOptionsContainer || !currentQualityDisplay) {
+        console.warn("Cannot populate quality options: Player or elements not ready.");
+        qualityOptionsContainer.innerHTML = '<li class="info-message" aria-disabled="true">Unavailable</li>';
+        return;
+    }
+
+    const availableQualities = player.getAvailableQualityLevels(); // e.g., ["hd1080", "hd720", ...]
+    const currentQuality = player.getPlaybackQuality(); // e.g., "hd720"
+
+    // Map API names to display names
+    const qualityMap = {
+        'hd2160': '2160p', 'hd1440': '1440p', 'hd1080': '1080p', 'hd720': '720p',
+        'large': '480p', 'medium': '360p', 'small': '240p', 'tiny': '144p', 'auto': 'Auto'
+    };
+
+    console.log("Populating Quality Options - Available:", availableQualities, "Current:", currentQuality);
+    qualityOptionsContainer.innerHTML = ''; // Clear previous options
+
+    if (!availableQualities || availableQualities.length === 0) {
+        console.warn("API returned no available quality levels.");
+         qualityOptionsContainer.innerHTML = '<li class="info-message" aria-disabled="true">Unavailable</li>';
+         currentQualityDisplay.textContent = 'Auto >'; // Default display
+         return;
+    }
+
+    // Add "Auto" option first
+    const autoLi = document.createElement('li');
+    autoLi.textContent = qualityMap['auto'];
+    autoLi.dataset.quality = 'auto';
+    autoLi.setAttribute('role', 'menuitemradio');
+    autoLi.tabIndex = -1; // Manage focus programmatically
+    const isAutoActive = currentQuality === 'auto'; // Treat Auto distinctly
+    autoLi.classList.toggle('active', isAutoActive);
+    autoLi.setAttribute('aria-checked', String(isAutoActive));
+    qualityOptionsContainer.appendChild(autoLi);
+
+    // Define a preferred order for display (highest to lowest)
+    const qualityOrder = ['hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+    // Filter available qualities based on the preferred order and add them
+    qualityOrder.forEach(level => {
+        if (availableQualities.includes(level)) {
+            const qualityName = qualityMap[level] || level;
+            const li = document.createElement('li');
+            li.textContent = qualityName;
+            li.dataset.quality = level;
+            li.setAttribute('role', 'menuitemradio');
+            li.tabIndex = -1;
+            const isActive = level === currentQuality;
+            li.classList.toggle('active', isActive);
+            li.setAttribute('aria-checked', String(isActive));
+            qualityOptionsContainer.appendChild(li);
+        }
+    });
+
+    // Update the main menu display text based on current quality
+    updateQualityDisplay();
+}
+
+// --- NEW Handler for Keyboard Navigation in Menus (Basic Example) ---
+function handleMenuKeydown(event) {
+    const menu = event.currentTarget; // The menu div/ul where the event occurred
+    const items = Array.from(menu.querySelectorAll('[role^="menuitem"]')); // Get all focusable items
+    if (!items.length) return;
+
+    let currentItemIndex = items.findIndex(item => item === document.activeElement);
+
+    switch (event.key) {
+        case 'ArrowUp':
+            event.preventDefault();
+            currentItemIndex = (currentItemIndex > 0) ? currentItemIndex - 1 : items.length - 1;
+            items[currentItemIndex]?.focus();
+            break;
+        case 'ArrowDown':
+            event.preventDefault();
+            currentItemIndex = (currentItemIndex < items.length - 1) ? currentItemIndex + 1 : 0;
+            items[currentItemIndex]?.focus();
+            break;
+        case 'Enter':
+        case ' ': // Spacebar
+            event.preventDefault();
+            document.activeElement?.click(); // Simulate a click on the focused item
+            break;
+        case 'Escape':
+            event.preventDefault();
+            // Close the current menu and potentially return to the parent
+            if (menu === speedSubmenu || menu === qualitySubmenu) {
+                menu.classList.add('hidden');
+                settingsMenu.classList.remove('hidden');
+                settingsBtn.setAttribute('aria-expanded', 'true');
+                settingsMenu.querySelector('[data-action^="open"]')?.focus(); // Focus first item in main menu
+            } else if (menu === settingsMenu) {
+                settingsMenu.classList.add('hidden');
+                settingsBtn.setAttribute('aria-expanded', 'false');
+                settingsBtn.focus(); // Focus back on the settings button
+            }
+            break;
+        case 'Tab':
+            // Allow tabbing out of the menu - document listener will close it
+            break;
+    }
+}
+
 
 // --- Timeline Handlers ---
 function handleTimelineItemClick(event) {
@@ -609,27 +759,59 @@ function handleTimelineItemClick(event) {
 function handleTimelineItemKeydown(event) {
     if (event.key === 'Enter' || event.key === ' ') {
         const timelineItem = event.target.closest('.timeline-item');
-        if (timelineItem) {
-            event.preventDefault(); // Prevent page scroll on spacebar
-            seekToTimelineItem(timelineItem);
-        }
+        if (timelineItem) { event.preventDefault(); seekToTimelineItem(timelineItem); }
     }
 }
 
 function seekToTimelineItem(timelineItem) {
-    if (timelineItem && timelineItem.dataset.time !== undefined) {
+    if (timelineItem?.dataset.time !== undefined) {
         const time = parseFloat(timelineItem.dataset.time);
-        if (!isNaN(time) && player && typeof player.seekTo === 'function') {
+        if (!isNaN(time) && player?.seekTo) {
             console.log(`Timeline Seek: Requesting seek to ${time}s`);
-            player.seekTo(time, true); // Seek and allow play
-            // Ensure playing after seek
-            if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                player.playVideo();
-            }
-        } else {
-             console.warn("Timeline seek failed: Invalid time or player not ready.", { time: timelineItem.dataset.time, playerExists: !!player });
-        }
+            player.seekTo(time, true);
+        } else { console.warn("Timeline seek failed", { time, playerExists: !!player }); }
     }
+}
+
+// --- Video Area Click/Double-Click Handlers ---
+function handleVideoAreaClick(event) {
+    // Prevent toggle if click is on controls, overlay button, or seek/progress bar
+    if (controlsContainer?.contains(event.target) ||
+        overlayPlayButton?.contains(event.target) ||
+        event.target === seekBar || event.target === progressBar) {
+        return; // Ignore click
+    }
+    togglePlayPause();
+}
+
+function handleVideoAreaDoubleClick(event) {
+    if (!player || !player.getCurrentTime || !player.getDuration || !player.seekTo) return;
+    // Prevent seek if double-click is on controls or overlay button
+    if (controlsContainer?.contains(event.target) || overlayPlayButton?.contains(event.target)) {
+        return; // Ignore double-click
+    }
+
+    const rect = playerContainer.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const containerWidth = playerContainer.offsetWidth;
+    const currentTime = player.getCurrentTime();
+    const duration = player.getDuration();
+    let newTime = currentTime;
+    const skipAmount = 10; // Seconds to skip
+
+    if (clickX > containerWidth / 2) { // Right half
+        newTime = Math.min(currentTime + skipAmount, duration); // Clamp to duration
+        console.log(`Double-click right: Seeking +${skipAmount}s to ${newTime.toFixed(2)}`);
+    } else { // Left half
+        newTime = Math.max(currentTime - skipAmount, 0); // Clamp to 0
+        console.log(`Double-click left: Seeking -${skipAmount}s to ${newTime.toFixed(2)}`);
+    }
+
+    player.seekTo(newTime, true);
+    // Immediately update UI for responsiveness
+    if (progressBar) progressBar.value = newTime;
+    if (seekBar) seekBar.value = newTime;
+    if (timeDisplay) timeDisplay.textContent = `${formatTime(newTime)} / ${formatTime(duration)}`;
 }
 
 
@@ -637,34 +819,32 @@ function seekToTimelineItem(timelineItem) {
 function togglePlayPause() {
     if (!player || typeof player.getPlayerState !== 'function') return;
     const state = player.getPlayerState();
-    if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.BUFFERING) {
-        player.pauseVideo();
-    } else {
+    // Play unless already playing or buffering
+    if (state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING) {
         player.playVideo();
+    } else {
+        player.pauseVideo();
     }
 }
 
 function handleSeekInput(event) {
-     if (!player || typeof player.getDuration !== 'function' || !timeDisplay) return;
+     if (!player || typeof player.getDuration !== 'function' || !timeDisplay || !seekBar || !progressBar) return;
      const duration = player.getDuration();
-     if (!isNaN(duration) && duration > 0) {
-        // Update time display instantly while scrubbing
-        timeDisplay.textContent = `${formatTime(event.target.value)} / ${formatTime(duration)}`;
+     const seekTime = parseFloat(event.target.value);
+     if (!isNaN(duration) && duration > 0 && !isNaN(seekTime)) {
+        timeDisplay.textContent = `${formatTime(seekTime)} / ${formatTime(duration)}`;
+        progressBar.value = seekTime; // Update progress visually during scrub
      }
-     // Optional: Update progress bar visually during scrubbing for instant feedback
-     if (progressBar) progressBar.value = event.target.value;
 }
 
 function handleSeekChange(event) {
-    if (!player || typeof player.seekTo !== 'function') return;
+    if (!player || typeof player.seekTo !== 'function' || !seekBar || !progressBar) return;
     const time = parseFloat(event.target.value);
     if (!isNaN(time)) {
         console.log(`Seek Bar Change: Requesting seek to ${time}`);
-        player.seekTo(time, true); // Seek and allow playing if paused
-        // No need to explicitly play here, seekTo(time, true) should handle it if needed.
+        player.seekTo(time, true);
+        progressBar.value = time; // Ensure progress matches final seek value
     }
-     // Update the progress bar value definitively after seeking
-     if (progressBar) progressBar.value = time;
 }
 
 function toggleMute() {
@@ -674,62 +854,36 @@ function toggleMute() {
     } else {
         player.mute();
     }
-    // UI update will happen via state change or direct call is fine too
-     updateVolumeUI(player.getVolume(), player.isMuted());
+    // Update UI immediately regardless of API latency
+    updateVolumeUI(player.getVolume(), player.isMuted());
 }
 
 function handleVolumeChange(event) {
-    if (!player || typeof player.setVolume !== 'function') return;
+    if (!player || typeof player.setVolume !== 'function' || !volumeSlider) return;
     const volume = parseInt(event.target.value, 10);
     if (player.isMuted() && volume > 0) {
-        player.unMute(); // Unmute if user adjusts volume slider while muted
+        player.unMute(); // Unmute if slider is moved from 0
     }
     player.setVolume(volume);
     updateVolumeUI(volume, player.isMuted()); // Update UI immediately
 }
 
-function handleSpeedChange(event) {
-    // Check if the clicked element is a list item with a data-speed attribute
-    const targetLi = event.target.closest('li[data-speed]');
-    if (targetLi && player && typeof player.setPlaybackRate === 'function' && speedOptionsList) {
-        const speed = parseFloat(targetLi.dataset.speed);
-         if (!isNaN(speed)) {
-             player.setPlaybackRate(speed);
-             updatePlaybackSpeedUI(speed); // Update display and active class
-             speedOptionsList.classList.add('hidden'); // Hide options after selection
-             console.log(`Playback speed set to: ${speed}x`);
-         }
-    }
-}
-
 function toggleFullscreen() {
-     if (!playerWrapper) return; // Need the wrapper element
+     if (!playerWrapper) return;
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-         // Enter fullscreen mode
         console.log("Entering fullscreen");
-        if (playerWrapper.requestFullscreen) {
-            playerWrapper.requestFullscreen();
-        } else if (playerWrapper.webkitRequestFullscreen) { /* Safari */
-            playerWrapper.webkitRequestFullscreen();
-        } else if (playerWrapper.mozRequestFullScreen) { /* Firefox */
-            playerWrapper.mozRequestFullScreen();
-        } else if (playerWrapper.msRequestFullscreen) { /* IE/Edge */
-            playerWrapper.msRequestFullscreen();
-        } else {
-             console.error("Fullscreen API is not supported by this browser.");
-        }
+        // Try standard first, then vendor prefixes
+        if (playerWrapper.requestFullscreen) playerWrapper.requestFullscreen();
+        else if (playerWrapper.webkitRequestFullscreen) playerWrapper.webkitRequestFullscreen();
+        else if (playerWrapper.mozRequestFullScreen) playerWrapper.mozRequestFullScreen();
+        else if (playerWrapper.msRequestFullscreen) playerWrapper.msRequestFullscreen();
+        else console.error("Fullscreen API is not supported by this browser.");
     } else {
-        // Exit fullscreen mode
         console.log("Exiting fullscreen");
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) { /* Safari */
-            document.webkitExitFullscreen();
-        } else if (document.mozCancelFullScreen) { /* Firefox */
-            document.mozCancelFullScreen();
-        } else if (document.msExitFullscreen) { /* IE/Edge */
-            document.msExitFullscreen();
-        }
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
     }
 }
 
@@ -737,22 +891,15 @@ function handleFullscreenChange() {
     if (!fullscreenBtn || !playerWrapper) return;
     const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
     const icon = fullscreenBtn.querySelector('i');
-
     if (isFullscreen) {
         console.log("Browser entered fullscreen mode.");
-        if(icon) {
-             icon.classList.remove('fa-expand');
-             icon.classList.add('fa-compress');
-        }
-        playerWrapper.classList.add('fullscreen-active'); // Add a class for styling
+        if(icon) { icon.className = 'fas fa-compress'; } // Update icon class
+        playerWrapper.classList.add('fullscreen-active');
         fullscreenBtn.setAttribute('aria-label', 'Exit Fullscreen');
     } else {
         console.log("Browser exited fullscreen mode.");
-        if(icon) {
-            icon.classList.remove('fa-compress');
-            icon.classList.add('fa-expand');
-        }
-        playerWrapper.classList.remove('fullscreen-active'); // Remove styling class
+        if(icon) { icon.className = 'fas fa-expand'; } // Update icon class
+        playerWrapper.classList.remove('fullscreen-active');
         fullscreenBtn.setAttribute('aria-label', 'Enter Fullscreen');
     }
 }
@@ -760,71 +907,86 @@ function handleFullscreenChange() {
 // --- Controls Visibility Handlers ---
 function showControls() {
     if (!controlsContainer || !playerWrapper) return;
-    clearTimeout(controlsTimeout); // Clear any pending hide timer
+    clearTimeout(controlsTimeout);
     controlsContainer.classList.remove('hidden');
-    controlsContainer.style.opacity = '1'; // Make sure it's visible
-    playerWrapper.style.cursor = ''; // Show default cursor
+    controlsContainer.style.opacity = '1';
+    playerWrapper.style.cursor = ''; // Show cursor
 }
 
 function hideControlsAfterTimeout() {
-     if (!controlsContainer || !playerWrapper) return;
-    clearTimeout(controlsTimeout); // Clear previous timer
-    // Only start hiding if the video is playing and the mouse isn't over the controls
-    if (player && player.getPlayerState() === YT.PlayerState.PLAYING && !controlsContainer.matches(':hover')) {
+     if (!controlsContainer || !playerWrapper || !player?.getPlayerState) return;
+    clearTimeout(controlsTimeout);
+    // Only hide if playing and mouse/focus is not over controls or menus
+    const menusAreOpen = !settingsMenu?.classList.contains('hidden') ||
+                         !speedSubmenu?.classList.contains('hidden') ||
+                         !qualitySubmenu?.classList.contains('hidden');
+    const focusInsideControls = controlsContainer.contains(document.activeElement);
+
+    if (player.getPlayerState() === YT.PlayerState.PLAYING &&
+        !controlsContainer.matches(':hover') &&
+        !menusAreOpen &&
+        !focusInsideControls) {
+
         controlsTimeout = setTimeout(() => {
-            controlsContainer.classList.add('hidden');
-             controlsContainer.style.opacity = '0'; // Use opacity for smooth transition if CSS supports it
-            playerWrapper.style.cursor = 'none'; // Hide cursor
-        }, 3000); // Hide after 3 seconds of inactivity
+            // Double check conditions before hiding
+            const stillPlaying = player?.getPlayerState() === YT.PlayerState.PLAYING;
+            const stillNotHovering = !controlsContainer?.matches(':hover');
+            const stillMenusClosed = settingsMenu?.classList.contains('hidden') &&
+                                   speedSubmenu?.classList.contains('hidden') &&
+                                   qualitySubmenu?.classList.contains('hidden');
+            const stillNotFocused = !controlsContainer?.contains(document.activeElement);
+
+            if (stillPlaying && stillNotHovering && stillMenusClosed && stillNotFocused) {
+                if (controlsContainer) {
+                    controlsContainer.classList.add('hidden');
+                    controlsContainer.style.opacity = '0';
+                }
+                if (playerWrapper) {
+                    playerWrapper.style.cursor = 'none'; // Hide cursor
+                }
+            }
+        }, 3000); // 3 seconds delay
     }
 }
 
-
 // --- Optional Rating Star Handlers ---
-let currentRating = 0; // Store the currently selected rating
+let currentRating = 0;
 function handleStarHover(event) {
-    if (!event.target.dataset.value) return;
+    if (!event.target.dataset.value || !ratingStars) return;
     const hoverValue = parseInt(event.target.dataset.value, 10);
     ratingStars.forEach((star, index) => {
-        // Add 'hover' class up to the hovered star
-        star.classList.toggle('hover', index < hoverValue);
-        // Temporarily make them solid font awesome stars on hover
-         star.classList.toggle('fas', index < hoverValue); // Use solid star
-         star.classList.toggle('far', index >= hoverValue); // Use regular star
+        const isHovered = index < hoverValue;
+        star.classList.toggle('hover', isHovered);
+        // Update both fas/far and selected state based on hover, not currentRating
+        star.className = `fa-${isHovered ? 's' : 'r'} fa-star ${isHovered ? 'hover' : ''} ${star.classList.contains('selected') && !isHovered ? 'selected' : ''}`;
     });
 }
 
 function handleStarMouseOut() {
-    // Reset stars based on the actual currentRating, remove all hover effects
+    if (!ratingStars) return;
     ratingStars.forEach((star, index) => {
-        star.classList.remove('hover'); // Remove hover highlight
-        star.classList.toggle('selected', index < currentRating); // Apply 'selected' class based on actual rating
-        // Reset icon style based on 'selected' state
-        star.classList.toggle('fas', index < currentRating); // Solid if selected
-        star.classList.toggle('far', index >= currentRating); // Regular if not selected
+        star.classList.remove('hover');
+        // Reset based on currentRating
+        const isSelected = index < currentRating;
+        star.classList.toggle('selected', isSelected);
+        star.className = `fa-${isSelected ? 's' : 'r'} fa-star ${isSelected ? 'selected' : ''}`;
     });
 }
 
 function handleStarClick(event) {
-    if (!event.target.dataset.value || !ratingFeedback) return;
+    if (!event.target.dataset.value || !ratingFeedback || !ratingStars) return;
     currentRating = parseInt(event.target.dataset.value, 10);
     ratingStars.forEach((star, index) => {
-        star.classList.toggle('selected', index < currentRating); // Set selected state
-        star.classList.remove('hover'); // Clean up hover state
-         // Ensure correct icon style after click
-         star.classList.toggle('fas', index < currentRating);
-         star.classList.toggle('far', index >= currentRating);
+        const isSelected = index < currentRating;
+        star.classList.remove('hover'); // Remove hover state on click
+        star.classList.toggle('selected', isSelected);
+        star.className = `fa-${isSelected ? 's' : 'r'} fa-star ${isSelected ? 'selected' : ''}`;
     });
-    // Display feedback message
     ratingFeedback.textContent = `Thank you for rating ${currentRating} out of 5!`;
-     ratingFeedback.classList.remove('hidden');
+    ratingFeedback.classList.remove('hidden');
     console.log(`Rating submitted: ${currentRating}`);
-    // TODO: Send the rating to your backend server here if needed
+    // TODO: Send rating to backend if needed
 }
 
-
 // --- Initial Check ---
-// The YouTube API loads asynchronously. The global `onYouTubeIframeAPIReady` function
-// in player.html handles calling `initializePlayer` when the API is ready.
-// No immediate call to initializePlayer here is needed.
-console.log("player.js loaded. Waiting for onYouTubeIframeAPIReady...");
+console.log("player.js loaded. Waiting for onYouTubeIframeAPIReady callback...");
