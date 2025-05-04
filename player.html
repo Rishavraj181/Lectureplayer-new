@@ -5,163 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Player</title>
     <link rel="stylesheet" href="player.css">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body>
-    <div class="player-wrapper">
-        <h1 id="video-title">Loading video title...</h1>
+<body class="dark-mode"> <!-- Start in dark mode by default -->
 
-        <div id="player-container">
-            <!-- This div will be replaced by the YouTube iframe -->
-            <div id="youtube-player"></div>
-            <div class="overlay-play-button hidden" id="overlay-play"> <!-- Start hidden -->
-                <i class="fas fa-play"></i>
+    <header class="player-header">
+        <a href="javascript:history.back()" class="back-button">←</a>
+        <h1 id="video-title-header">Loading Title...</h1>
+        <div class="menu-container">
+            <div class="menu-icon" id="menu-icon">☰</div>
+            <div class="dropdown-menu" id="dropdown-menu">
+                 <button id="dark-light-toggle">Light Mode</button>
+                 <a href="#" id="old-player-link" class="menu-link-button">Old Player</a>
+                 <!-- Add more menu items here if needed -->
             </div>
         </div>
+    </header>
 
-        <div class="controls-container" id="controls">
-            <button id="play-pause-btn" class="control-btn" aria-label="Play/Pause">
-                <i class="fas fa-play"></i>
-            </button>
+    <!-- Error Message Area -->
+    <div id="error-message-area"></div>
 
-            <div class="seek-bar-container">
-                 <!-- Background progress -->
-                <progress id="progress-bar" value="0" min="0"></progress>
-                <!-- Actual slider -->
-                <input type="range" id="seek-bar" value="0" min="0" step="0.1" aria-label="Seek slider">
+    <main class="player-main">
+        <div class="video-section">
+            <div class="video-container">
+                <!-- YouTube Player Will Be Embedded Here -->
+                <div id="youtube-player-placeholder">Loading Player...</div>
+                <div id="youtube-player"></div>
+            </div>
+             <!-- Controls overlay removed -->
+        </div>
+
+        <div class="info-section">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="study-material">Study Material</button>
+                <button class="tab-button" data-tab="my-notes">My Notes</button>
+                <button class="tab-button" data-tab="ratings">Ratings</button>
+                <button class="tab-button" data-tab="timeline">Timeline</button>
+                <button class="tab-button" data-tab="related-videos">Related Videos</button>
             </div>
 
-            <span id="time-display" class="time">00:00 / 00:00</span>
-
-            <div class="volume-container">
-                <button id="volume-btn" class="control-btn" aria-label="Mute/Unmute">
-                    <i class="fas fa-volume-high"></i> <!-- Start with high volume icon -->
-                </button>
-                <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume slider">
-            </div>
-           <!-- Inside div.controls-container -->
-
-            <!-- [Other controls like volume...] -->
-
-            <!-- NEW Settings Button and Menu Structure -->
-            <div class="settings-container">
-                <button id="settings-btn" class="control-btn" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-cog"></i>
-                </button>
-
-                <!-- Main Settings Menu (Initially Hidden) -->
-                <div class="settings-menu hidden" id="settings-menu" role="menu">
-                    <div class="settings-menu-item" role="menuitem" data-action="open-speed-submenu" tabindex="0">
-                        <span>Playback speed</span>
-                        <span class="setting-value" id="current-speed-display">Normal ></span>
-                    </div>
-                    <div class="settings-menu-item" role="menuitem" data-action="open-quality-submenu" tabindex="0">
-                        <span>Quality</span>
-                        <span class="setting-value" id="current-quality-display">Auto ></span>
-                    </div>
-                </div>
-
-                <!-- Speed Sub-Menu (Initially Hidden) -->
-                <div class="settings-submenu hidden" id="speed-submenu" role="menu">
-                    <div class="settings-submenu-header">
-                        <button class="back-button" data-action="close-submenu" aria-label="Back to settings"><i class="fas fa-chevron-left"></i></button>
-                        <span>Playback speed</span>
-                    </div>
-                    <ul id="speed-options-container">
-                        <!-- Speed options will be added here by JS or hardcoded -->
-                        <li role="menuitemradio" aria-checked="false" data-speed="0.25">0.25x</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="0.5">0.5x</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="0.75">0.75x</li>
-                        <li role="menuitemradio" aria-checked="true" data-speed="1">Normal</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="1.25">1.25x</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="1.5">1.5x</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="1.75">1.75x</li>
-                        <li role="menuitemradio" aria-checked="false" data-speed="2">2x</li>
+            <div class="tab-content">
+                <div id="study-material" class="tab-pane active">
+                    <h2>Study Material</h2>
+                    <ul id="study-material-list">
+                        <li>Loading...</li>
                     </ul>
                 </div>
-
-                <!-- Quality Sub-Menu (Initially Hidden) -->
-                 <div class="settings-submenu hidden" id="quality-submenu" role="menu">
-                    <div class="settings-submenu-header">
-                         <button class="back-button" data-action="close-submenu" aria-label="Back to settings"><i class="fas fa-chevron-left"></i></button>
-                         <span>Quality</span>
-                    </div>
-                     <ul id="quality-options-container">
-                         <!-- Quality options will be populated by JS -->
-                         <li class="loading-message">Loading qualities...</li>
-                     </ul>
-                 </div>
-
-            </div>
-
-            <button id="fullscreen-btn" class="control-btn" aria-label="Fullscreen">
-                <i class="fas fa-expand"></i>
-            </button>
-        </div>
-         <p id="error-message" class="error hidden"></p> <!-- Start hidden -->
-
-         <!-- Tab Buttons Area -->
-         <div class="content-tabs">
-             <ul>
-                 <!-- Make sure data-target matches the ID of the content div -->
-                 <li><button class="tab-button active" data-target="study-material-content">Study Material</button></li>
-                 <li><button class="tab-button" data-target="my-notes-content">My Notes</button></li>
-                 <li><button class="tab-button" data-target="ratings-content">Ratings</button></li>
-                 <li><button class="tab-button" data-target="timeline-content">Timeline</button></li>
-                 <li><button class="tab-button" data-target="related-videos-content">Related Videos</button></li>
-             </ul>
-         </div>
-
-         <!-- Tab Content Area -->
-        <div class="tab-content-area">
-            <!-- Ensure IDs match data-target values -->
-            <div id="study-material-content" class="tab-content active">
-                <h2>Study Material</h2>
-                <div id="study-material-list">
-                    <!-- Dynamic content will be loaded here -->
-                    <p class="loading-message">Loading materials...</p>
+                <div id="my-notes" class="tab-pane">
+                    <h2>My Notes</h2>
+                    <textarea placeholder="Write your notes here..."></textarea>
+                </div>
+                <div id="ratings" class="tab-pane">
+                    <h2>Ratings</h2>
+                    <p>Rating system coming soon.</p>
+                </div>
+                <div id="timeline" class="tab-pane">
+                    <h2>Timeline</h2>
+                    <ul id="timeline-list">
+                         <li>Loading...</li>
+                    </ul>
+                </div>
+                <div id="related-videos" class="tab-pane">
+                    <h2>Related Videos</h2>
+                    <ul id="related-videos-list">
+                         <li>Loading...</li>
+                    </ul>
                 </div>
             </div>
-            <div id="my-notes-content" class="tab-content">
-                <h2>My Notes</h2>
-                 <textarea placeholder="Write your notes here..." style="width: 95%; height: 150px; background: #333; border: 1px solid #444; color: #ddd; padding: 10px; border-radius: 4px;"></textarea>
-                 <button class="view-button" style="margin-top: 10px;">Save Notes</button>
-            </div>
-             <div id="ratings-content" class="tab-content">
-                 <h2>Ratings</h2>
-                 <p style="color: #ccc;">Rate this video:</p>
-                 <div class="stars" style="font-size: 1.5em; color: #ccc; cursor:pointer;">
-                    <i class="far fa-star" data-value="1"></i>
-                    <i class="far fa-star" data-value="2"></i>
-                    <i class="far fa-star" data-value="3"></i>
-                    <i class="far fa-star" data-value="4"></i>
-                    <i class="far fa-star" data-value="5"></i>
-                 </div>
-                 <p id="rating-feedback" class="hidden" style="margin-top: 10px; font-size: 0.9em; color: #888;"></p> <!-- Start hidden -->
-             </div>
-             <div id="timeline-content" class="tab-content">
-                <h2>Timeline / Chapters</h2>
-                <!-- **** ADDED THIS DIV **** -->
-                <div id="timeline-list">
-                     <p class="loading-message">Loading timeline...</p>
-                </div>
-             </div>
-             <div id="related-videos-content" class="tab-content">
-                <h2>Related Videos</h2>
-                 <div id="related-videos-list">
-                    <!-- Dynamic content will be loaded here -->
-                     <p class="loading-message">Loading related videos...</p>
-                 </div>
-             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- **** REMOVED SCRIPT TAG FOR video_data.json **** -->
-
-    <!-- YouTube IFrame API -->
+    <!-- IMPORTANT: Load YouTube API First -->
     <script>
-        var tag = document.createElement('script');
+      var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -188,7 +103,7 @@
             }
         }
     </script>
-    <!-- Load your player script AFTER the API setup -->
+    <!-- Custom Player Script -->
     <script src="player.js"></script>
 </body>
 </html>
