@@ -168,13 +168,13 @@ async function fetchVideoData() {
 
 
     try {
-        console.log("Fetching data from Video_data.json");
-        const response = await fetch('Video_data.json');
+        console.log("Fetching data from video_data.json");
+        const response = await fetch('video_data.json');
          console.log("Fetch response status:", response.status);
         if (!response.ok) {
             // Be specific about the error
             if(response.status === 404) {
-                 throw new Error(`Video_data.json not found (404). Make sure it's in the same folder.`);
+                 throw new Error(`video_data.json not found (404). Make sure it's in the same folder.`);
             } else {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
