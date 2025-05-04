@@ -1,410 +1,329 @@
-/* Basic Reset & Defaults */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:root {
-    --bg-dark: #1a1a1a;
-    --text-dark: #e0e0e0;
-    --card-dark: #2c2c2c;
-    --border-dark: #444;
-    --accent-dark: #e53935; /* Red accent */
-    --accent-hover-dark: #c62828;
-    --menu-bg-dark: #383838;
-
-    --bg-light: #f4f4f4;
-    --text-light: #333;
-    --card-light: #ffffff;
-    --border-light: #ccc;
-    --accent-light: #d32f2f; /* Slightly darker red for light mode */
-    --accent-hover-light: #b71c1c;
-    --menu-bg-light: #eeeeee;
-}
-
+/* General Body and Layout */
 body {
     font-family: sans-serif;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    display: flex; /* Use flexbox for overall layout */
-    flex-direction: column; /* Stack header, error, main */
-    min-height: 100vh; /* Ensure body takes full viewport height */
+    margin: 0;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-body.dark-mode {
-    background-color: var(--bg-dark);
-    color: var(--text-dark);
-    --bg-color: var(--bg-dark);
-    --text-color: var(--text-dark);
-    --card-color: var(--card-dark);
-    --border-color: var(--border-dark);
-    --accent-color: var(--accent-dark);
-    --accent-hover: var(--accent-hover-dark);
-    --menu-bg: var(--menu-bg-dark);
-    --menu-border: var(--border-dark);
-    --menu-text: var(--text-dark);
-    --menu-button-bg: var(--card-dark);
-    --menu-button-hover-bg: #555;
-}
-
-body.light-mode {
-    background-color: var(--bg-light);
-    color: var(--text-light);
-    --bg-color: var(--bg-light);
-    --text-color: var(--text-light);
-    --card-color: var(--card-light);
-    --border-color: var(--border-light);
-    --accent-color: var(--accent-light);
-    --accent-hover: var(--accent-hover-light);
-    --menu-bg: var(--menu-bg-light);
-    --menu-border: var(--border-light);
-    --menu-text: var(--text-light);
-    --menu-button-bg: var(--card-light);
-    --menu-button-hover-bg: #ddd;
-}
-
-/* Header */
-.player-header {
+/* Top Bar */
+.top-bar {
     display: flex;
     align-items: center;
     padding: 10px 15px;
-    background-color: var(--card-color);
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-color);
-    position: sticky; /* Make header sticky */
-    top: 0;
-    z-index: 100; /* Ensure header is above content */
-    width: 100%; /* Take full width */
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .back-button {
-    font-size: 1.8em;
-    color: var(--text-color);
-    text-decoration: none;
-    margin-right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
     cursor: pointer;
-    transition: color 0.2s ease;
-}
-.back-button:hover {
-    color: var(--accent-color);
+    margin-right: 15px;
+    padding: 0 5px;
+    color: #555;
 }
 
-#video-title-header {
-    flex-grow: 1; /* Take available space */
+.back-button:hover {
+    color: #000;
+}
+
+.video-title-h1 {
     font-size: 1.2em;
-    font-weight: normal;
-    text-align: center; /* Center title */
+    color: #333;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-left: 15px; /* Space between back button and title */
-    margin-right: 15px; /* Space between title and menu */
+    flex-grow: 1; /* Allow title to take space */
 }
 
-/* Hamburger Menu */
-.menu-container {
-    position: relative; /* Context for absolute positioning of dropdown */
+#video-container {
+    width: 800px;       /* Set the desired fixed width */
+    height: 500px;      /* Set the desired fixed height */
+    margin: 0 auto 20px auto; /* Center horizontally, add 20px margin below */
+    background-color: #000; /* Optional: black background */
+    overflow: hidden;   /* Hide anything sticking out */
+    flex-shrink: 0;   /* Prevent shrinking in flex context */
+    border: 1px solid #ccc; /* Optional: adds a border like before */
 }
 
-.menu-icon {
-    font-size: 1.8em; /* Increased size */
-    cursor: pointer;
-    padding: 5px;
-    line-height: 1; /* Adjust line height for better vertical alignment */
-    color: var(--text-color);
-    transition: color 0.2s ease;
-    user-select: none; /* Prevent text selection */
-}
-.menu-icon:hover {
-     color: var(--accent-color);
+/* Google Drive Iframe - FILL FIXED CONTAINER */
+#gdrive-iframe {
+    width: 100%;      /* Fill the container's width (300px) */
+    height: 100%;     /* Fill the container's height (400px) */
+    border: 0;        /* Remove iframe border */
+    display: block;   /* Prevent extra space below */
 }
 
-.dropdown-menu {
-    display: none; /* Hidden by default */
-    position: absolute;
-    top: calc(100% + 5px); /* Position below the icon */
-    right: 0;
-    background-color: var(--menu-bg);
-    border: 1px solid var(--menu-border);
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 110; /* Above header content */
-    min-width: 150px; /* Minimum width */
-    padding: 5px 0; /* Padding top/bottom */
-}
-
-.dropdown-menu.show {
-    display: block; /* Show the menu */
-}
-
-.dropdown-menu button,
-.dropdown-menu a.menu-link-button { /* Style both buttons and links similarly */
-    display: block; /* Stack items vertically */
+/* Content Area Below Video */
+.content-area {
+    flex-grow: 1;
     width: 100%;
-    padding: 10px 15px;
-    background-color: transparent; /* Use menu background */
-    border: none;
-    color: var(--menu-text);
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.95em;
-    text-decoration: none; /* Remove underline from links */
-    white-space: nowrap;
-    transition: background-color 0.2s ease;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 15px 20px 15px;
+    box-sizing: border-box;
 }
 
-.dropdown-menu button:hover,
-.dropdown-menu a.menu-link-button:hover {
-    background-color: var(--menu-button-hover-bg);
-}
-
-
-/* Error Message Area */
-#error-message-area {
-    padding: 10px 15px;
-    background-color: #ffdddd; /* Light red background */
-    color: #d8000c; /* Dark red text */
-    text-align: center;
-    font-weight: bold;
-    display: none; /* Hidden by default */
-    border-bottom: 1px solid #ffbcc0;
-}
-#error-message-area.show {
-    display: block; /* Show when error occurs */
-}
-
-
-/* Main Content */
-.player-main {
-    /* No specific styles needed here now, flex in body handles layout */
-    flex-grow: 1; /* Allow main to take remaining space */
-}
-
-/* Video Section */
-.video-section {
-    background-color: #000; /* Black background behind player */
-    position: relative; /* Needed for potential future absolute elements */
-    max-width: 50%;   /* Limit width to 85% of the available space */
-    max-height: 50%; /* Limit height to 85% of the available space */
-    margin-left: auto;  /* Center the section horizontally */
-    margin-right: auto; /* Center the section horizontally */
-}
-
-.video-container {
-    position: relative;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-    height: 0;
-    overflow: hidden;
-    max-width: 100%;
-    background: #000; /* Fallback background */
-}
-
-.video-container iframe,
-.video-container #youtube-player-placeholder {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: none; /* Remove iframe border */
-}
-
-#youtube-player-placeholder {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #aaa;
-    font-size: 1.2em;
-}
-
-/* Player Controls Overlay - REMOVED */
-/* .player-controls-overlay { ... } */
-
-/* Info Section (Tabs & Content) */
-.info-section {
-    padding: 0;
-    background-color: var(--bg-color); /* Use body background */
-}
-
+/* Tabs */
 .tabs {
     display: flex;
-    overflow-x: auto; /* Allow horizontal scrolling on small screens */
-    border-bottom: 2px solid var(--border-color);
-    background-color: var(--card-color);
-    position: sticky; /* Make tabs sticky below header */
-    top: 57px; /* Adjust based on actual header height */
-    z-index: 90; /* Below header but above content */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-.tabs::-webkit-scrollbar { /* Chrome, Safari, Opera */
-    display: none;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background-color: #fff; /* Ensure tabs bg is white */
 }
 
-
-.tab-button {
-    padding: 12px 18px;
+.tab-link {
+    padding: 10px 15px;
     cursor: pointer;
     border: none;
-    background-color: transparent;
-    color: var(--text-color);
-    font-size: 1em;
+    background: none;
+    font-size: 0.95em;
+    color: #555;
     white-space: nowrap;
-    position: relative;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px; /* Overlap container border */
     transition: color 0.2s ease, border-color 0.2s ease;
-    flex-shrink: 0; /* Prevent buttons from shrinking */
-    border-bottom: 3px solid transparent; /* Reserve space for active border */
-    margin-bottom: -2px; /* Align bottom border */
 }
 
-.tab-button:hover {
-    color: var(--accent-color);
+.tab-link:hover {
+    color: #000;
 }
 
-.tab-button.active {
-    color: var(--accent-color);
-    font-weight: bold;
-    border-bottom-color: var(--accent-color);
+.tab-link.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+    font-weight: 600;
 }
 
+/* Tab Content Panels */
+/* Tab Content Panels */
 .tab-content {
-    padding: 20px;
-    background-color: var(--bg-color); /* Match body */
+    display: none;
+    animation: fadeIn 0.5s;
+    padding-top: 15px; /* Increased padding slightly for spacing */
+    padding-right: 5px; /* Add a little space for scrollbar */
+
+    /* --- ADD THESE LINES --- */
+    max-height: 40vh; /* Limit height to 40% of viewport height (Adjust as needed) */
+    overflow-y: auto; /* Add vertical scrollbar ONLY if content overflows */
+    /* --- END OF ADDED LINES --- */
 }
 
-.tab-pane {
-    display: none; /* Hide inactive panes */
+.tab-content.active {
+    display: block;
 }
 
-.tab-pane.active {
-    display: block; /* Show active pane */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-.tab-pane h2 {
+/* Specific Tab Content Styling */
+.tab-content h3 {
+    margin-top: 0;
     margin-bottom: 15px;
-    font-size: 1.3em;
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
+    font-size: 1.1em;
+    color: #333;
 }
 
-/* Styling for lists within tabs */
-.tab-pane ul {
+/* Notes Tab */
+#notes-content textarea { /* Example if you add textarea later */
+    width: 100%;
+    min-height: 80px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.notes-buttons button { /* Example if you add buttons later */
+    padding: 8px 15px;
+    margin-right: 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.notes-buttons .save-button {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+.notes-buttons .cancel-button {
+    background-color: #f8f9fa;
+}
+
+/* Study Material Tab */
+#study-material-content ul {
     list-style: none;
     padding: 0;
+    margin: 0;
 }
-
-.tab-pane li,
-.tab-pane .list-item {
-    padding: 10px 5px;
-    border-bottom: 1px solid var(--border-color);
+#study-material-content li {
+    margin-bottom: 10px;
+    padding: 12px 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: background-color 0.2s ease;
+    font-size: 0.95em;
 }
-.tab-pane li:last-child,
-.tab-pane .list-item:last-child {
-    border-bottom: none;
-}
-.tab-pane li:hover {
-    background-color: rgba(128, 128, 128, 0.1); /* Subtle hover */
-}
-
-/* Timeline specific styles */
-#timeline-list li {
-    cursor: pointer;
-}
-#timeline-list .time-stamp {
-    font-weight: bold;
-    margin-right: 15px;
-    color: var(--accent-color);
-    min-width: 50px; /* Ensure alignment */
-    text-align: right;
-}
-#timeline-list .time-title {
+#study-material-content li span {
     flex-grow: 1;
+    margin-right: 15px;
 }
-
-/* Study Material & Related Videos Links/Buttons */
-.tab-pane a, .tab-pane .link-like {
-    color: var(--accent-color);
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-.tab-pane a:hover, .tab-pane .link-like:hover {
-    color: var(--accent-hover);
-    text-decoration: underline;
-}
-
-.view-button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
+#study-material-content a.view-button {
+    display: inline-block;
     padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    text-decoration: none; /* Remove underline if it's an <a> */
-    transition: background-color 0.2s ease;
-    display: inline-block; /* Needed for padding on <a> */
-    text-align: center;
-    min-width: 60px;
-}
-
-.view-button:hover {
-    background-color: var(--accent-hover);
+    background-color: #e74c3c;
     color: white;
     text-decoration: none;
-}
-
-/* My Notes Textarea */
-#my-notes textarea {
-    width: 100%;
-    min-height: 150px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-color);
-    color: var(--text-color);
     border-radius: 4px;
-    font-family: inherit;
-    font-size: 1em;
-    resize: vertical;
+    font-size: 0.9em;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+#study-material-content a.view-button:hover {
+    background-color: #c0392b;
+}
+#study-material-content .no-material {
+    color: #777;
+    font-style: italic;
+    background-color: transparent; /* Make placeholder look different */
+    border: none;
+    padding: 10px 0;
 }
 
-/* Responsive Adjustments */
-@media (max-width: 600px) {
-    #video-title-header {
-        font-size: 1em; /* Slightly smaller title */
-        margin-left: 5px;
-        margin-right: 5px;
-    }
-     .back-button {
-        font-size: 1.5em;
-        margin-right: 5px;
-    }
-     .menu-icon {
-        font-size: 1.5em;
-    }
-    .tabs {
-        top: 51px; /* Adjust sticky position if header height changes */
-    }
-    .tab-button {
-        padding: 10px 12px;
-        font-size: 0.9em;
-    }
-    .tab-content {
-        padding: 15px;
-    }
-    .tab-pane h2 {
-        font-size: 1.2em;
-    }
-     .dropdown-menu {
-        min-width: 130px; /* Smaller dropdown */
-    }
-    .dropdown-menu button,
-    .dropdown-menu a.menu-link-button {
-        padding: 8px 12px;
-        font-size: 0.9em;
-    }
+/* Ratings Tab */
+.star-rating span {
+    font-size: 1.5em;
+    color: #ccc;
+    cursor: pointer;
+    margin-right: 2px;
+}
+.star-rating span:hover,
+.star-rating span.selected {
+    color: #ffc107;
+}
+#ratings-content textarea {
+    width: 100%;
+    min-height: 60px;
+    box-sizing: border-box;
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+#ratings-content button.save-button {
+    background-color: #007bff;
+    border-color: #007bff;
+    margin-top: 10px;
+    color: white;
+    padding: 8px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Timeline Tab */
+#timeline-content p {
+    margin: 5px 0;
+    font-size: 0.95em;
+    color: #444;
+}
+
+/* Related Videos Tab */
+.related-videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+.related-video-card {
+    background-color: #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column; /* Stack image and info */
+}
+.related-video-card img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    background-color: #eee;
+    object-fit: cover; /* Scale image nicely */
+}
+.related-video-card .info {
+    padding: 12px;
+    flex-grow: 1; /* Allow info section to grow */
+    display: flex;
+    flex-direction: column; /* Stack elements inside info */
+}
+.related-video-card h4 {
+    font-size: 1em;
+    margin: 0 0 5px 0;
+    color: #333;
+}
+.related-video-card p {
+    font-size: 0.85em;
+    color: #666;
+    margin: 0 0 10px 0;
+    flex-grow: 1; /* Push button to bottom */
+}
+.related-video-card .related-watch-button { /* Renamed class */
+     display: block;
+     width: 100%;
+     padding: 8px 10px;
+     background-color: #e74c3c;
+     color: white;
+     text-decoration: none;
+     border-radius: 4px;
+     font-size: 0.9em;
+     text-align: center;
+     border: none;
+     cursor: pointer;
+     box-sizing: border-box;
+     margin-top: auto; /* Aligns button to bottom */
+     transition: background-color 0.2s ease;
+}
+ .related-video-card .related-watch-button:hover {
+     background-color: #c0392b;
+ }
+ /* Style for loading placeholder */
+.loading-placeholder {
+    color: #777;
+    font-style: italic;
+    text-align: center;
+    width: 100%; /* Span across grid */
+}
+#related-videos-container p.loading-placeholder {
+    padding: 20px 0;
+    margin: 0;
+}
+
+/* Utility and Error Styling */
+.implementation-note { /* Style for "(not implemented)" messages */
+    margin-top: 20px;
+    font-style: italic;
+    color: #777;
+    font-size: 0.9em;
+}
+#error-message {
+    color: red;
+    font-weight: bold;
+    text-align: center;
+    margin: 30px 0; /* Adjusted margin */
+    padding: 20px;
+    background-color: #ffebeb;
+    border: 1px solid red;
+    border-radius: 5px;
+    display: none; /* Hidden by default */
 }

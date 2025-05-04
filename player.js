@@ -1,355 +1,322 @@
-// --- Global Variables ---
-let player; // YouTube Player object
-let currentVideoData = null; // To store data for the current video
-let youtubeId = null; // Store video ID globally within the script scope
-let videoTitle = 'Video Player'; // Default title
+/**
+ * player.js
+ * Handles functionality for the video player page (player.html).
+ * - Loads video based on URL parameters.
+ * - Populates study materials dynamically.
+ * - Populates related videos dynamically.
+ * - Handles tab switching.
+ * - Manages back button navigation.
+ * - Includes placeholder for star ratings.
+ */
 
-// --- DOM Elements ---
-const videoTitleHeader = document.getElementById('video-title-header');
-const studyMaterialList = document.getElementById('study-material-list');
-const timelineList = document.getElementById('timeline-list');
-const relatedVideosList = document.getElementById('related-videos-list');
-const tabsContainer = document.querySelector('.tabs');
-const tabPanes = document.querySelectorAll('.tab-pane');
-const tabButtons = document.querySelectorAll('.tab-button');
-const darkLightToggle = document.getElementById('dark-light-toggle');
-const oldPlayerLink = document.getElementById('old-player-link'); // Changed to link
-const playerPlaceholder = document.getElementById('youtube-player-placeholder');
-const menuIcon = document.getElementById('menu-icon');
-const dropdownMenu = document.getElementById('dropdown-menu');
-const errorMessageArea = document.getElementById('error-message-area');
+document.addEventListener('DOMContentLoaded', function() {
 
+    // --- Get References to HTML Elements ---
+    const iframePlayer = document.getElementById('gdrive-iframe');
+    const videoContainer = document.getElementById('video-container');
+    const errorMessage = document.getElementById('error-message');
+    const pageTitleElement = document.querySelector('title');
+    const headingElement = document.querySelector('.video-title-h1');
+    const backButton = document.getElementById('backBtn');
+    const tabsContainer = document.querySelector('.tabs');
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const studyMaterialList = document.getElementById('study-material-list');
+    const ratingStars = document.querySelectorAll('.star-rating span');
+    const relatedVideosContainer = document.getElementById('related-videos-container');
 
-// --- Utility Functions ---
-function getQueryParams() {
-    const params = {};
-    const queryString = window.location.search.substring(1);
-    const regex = /([^&=]+)=([^&]*)/g;
-    let m;
-    while (m = regex.exec(queryString)) {
-        params[decodeURIComponent(m[1])] = decodeURIComponent(m[2].replace(/\+/g, ' ')); // Handle '+' for spaces
-    }
-    return params;
-}
+    // ====================================================================
+    // --- IMPORTANT: USER DATA REQUIRED BELOW ---
+    // ====================================================================
+    // Replace ALL placeholder IDs (like "YOUR_FILE_ID_...", "GDRIVE_ID_FOR_...")
+    // with the actual Google Drive File IDs for your videos and documents.
+    // The script WILL NOT WORK correctly without the real IDs.
+    // ====================================================================
 
-function formatTime(totalSeconds) {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
+    // 1. Study Materials: Map VIDEO ID -> Array of Document Objects {title, id}
+    const studyMaterialsMap = {
+        "1pTm1TwpaEpFsNx8mvJxPyyL7kQWOK6CR": [ // Example: ID for "Basic Maths_Lec_01"
+            { title: "NCERT (PDF)", id: "1rN-NYRmIOIDFFohpBjOQ9FDj-Xt2zqeP" }, // Replace with ACTUAL Document ID
+            { title: "NOTES L-1", id: "GDRIVE_ID_FOR_NOTES_L1_PDF" }          // Replace with ACTUAL Document ID
+        ],
+        "YOUR_FILE_ID_2": [ // Replace "YOUR_FILE_ID_2" with the ACTUAL GDrive ID for Video 2
+            { title: "Unit and Dimension Slides", id: "GDRIVE_ID_FOR_UD_SLIDES_PDF" }, // Replace
+             { title: "Notes L-1",id: "GDRIVE_ID_FOR_UD_NOTES_PDF"}                     // Replace
+        ],
+         "UNIT_DIM_LEC_02_ID": [ // Example ID for "Unit and Dimension_Lec_02"
+              { title: "Practice Problems U&D L2", id: "GDRIVE_ID_FOR_UD_L2_PRACTICE" } // Replace
+         ],
+        "YOUR_FILE_ID_RELATED_1": [], // Example: No specific materials for this related video
+    };
 
-function showErrorMessage(message, isCritical = false) {
-    console.error("Error Display:", message);
-    errorMessageArea.textContent = message;
-    errorMessageArea.classList.add('show');
-
-    // Clear loading states in tabs when showing an error
-    studyMaterialList.innerHTML = '<li>Error loading data.</li>';
-    timelineList.innerHTML = '<li>Error loading data.</li>';
-    relatedVideosList.innerHTML = '<li>Error loading data.</li>';
-
-    // If it's a critical error (e.g., no video ID), hide the player placeholder too
-    if (isCritical && playerPlaceholder) {
-        playerPlaceholder.textContent = 'Video cannot be loaded.';
-        playerPlaceholder.style.display = 'flex'; // Ensure it's visible
-         // Hide the iframe container if it exists
-         const playerDiv = document.getElementById('youtube-player');
-         if(playerDiv) playerDiv.style.display = 'none';
-    }
-}
-
-function hideErrorMessage() {
-     errorMessageArea.textContent = '';
-     errorMessageArea.classList.remove('show');
-}
-
-// --- Theme Management ---
-function applyTheme(theme) {
-    const isDark = theme === 'dark';
-    document.body.classList.toggle('dark-mode', isDark);
-    document.body.classList.toggle('light-mode', !isDark);
-    darkLightToggle.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-    localStorage.setItem('theme', theme);
-}
-
-// --- Tab Content Population ---
-function populateStudyMaterials(materials) {
-    studyMaterialList.innerHTML = ''; // Clear loading/previous
-    if (!materials || materials.length === 0) {
-        studyMaterialList.innerHTML = '<li>No study materials available.</li>';
-        return;
-    }
-    materials.forEach(item => {
-        const li = document.createElement('li');
-        const titleSpan = document.createElement('span');
-        titleSpan.textContent = item.title;
-
-        const viewLink = document.createElement('a');
-        viewLink.href = item.url;
-        viewLink.textContent = 'View';
-        viewLink.classList.add('view-button');
-        if (item.external) {
-            viewLink.target = '_blank';
-            viewLink.rel = 'noopener noreferrer';
-        }
-
-        li.appendChild(titleSpan);
-        li.appendChild(viewLink);
-        studyMaterialList.appendChild(li);
-    });
-}
-
-function populateTimeline(timeline) {
-    timelineList.innerHTML = ''; // Clear loading/previous
-     if (!timeline || timeline.length === 0) {
-        timelineList.innerHTML = '<li>No timeline available.</li>';
-        return;
-    }
-    timeline.forEach(item => {
-        const li = document.createElement('li');
-        li.dataset.time = item.time;
-
-        const timeSpan = document.createElement('span');
-        timeSpan.classList.add('time-stamp');
-        timeSpan.textContent = formatTime(item.time);
-
-        const titleSpan = document.createElement('span');
-        titleSpan.classList.add('time-title');
-        titleSpan.textContent = item.title;
-
-        li.appendChild(timeSpan);
-        li.appendChild(titleSpan);
-
-        li.addEventListener('click', () => {
-            if (player && typeof player.seekTo === 'function') {
-                player.seekTo(item.time, true);
-                 // Optional highlight removed for simplicity, can be added back
-            } else {
-                console.warn("Player not ready or seekTo not available.");
+    // 2. Related Videos: Map VIDEO ID -> Array of Related Video Objects {title, author, thumbnailUrl, gdriveId}
+    const relatedVideosMap = {
+        "1pTm1TwpaEpFsNx8mvJxPyyL7kQWOK6CR": [ // Related videos for Video 1 (Example: "Basic Maths_Lec_01")
+            {
+                title: "Basic Maths_Lec_02",
+                author: "Shantanu Singh",
+                thumbnailUrl: "https://via.placeholder.com/320x180.png?text=Basic+Maths+Lec+02", // Replace with actual thumb if available
+                gdriveId: "YOUR_FILE_ID_RELATED_1" // Replace with ACTUAL ID for "Basic Maths_Lec_02"
+            },
+            {
+                title: "Unit and Dimension_Lec_01",
+                author: "Shantanu Singh",
+                thumbnailUrl: "https://via.placeholder.com/320x180.png?text=Unit+Dimension+Lec+01", // Replace
+                gdriveId: "YOUR_FILE_ID_2" // Replace with ACTUAL ID for "Unit and Dimension_Lec_01"
             }
+        ],
+        "YOUR_FILE_ID_2": [ // Related videos for Video 2 (Example: "Unit and Dimension_Lec_01")
+            {
+                title: "Basic Maths_Lec_01",
+                author: "Shantanu Singh",
+                thumbnailUrl: "https://via.placeholder.com/320x180.png?text=Basic+Maths+Lec+01", // Replace
+                gdriveId: "1pTm1TwpaEpFsNx8mvJxPyyL7kQWOK6CR" // Link back to video 1
+            },
+             {
+                title: "Unit and Dimension_Lec_02",
+                author: "Shantanu Singh",
+                thumbnailUrl: "https://via.placeholder.com/320x180.png?text=Unit+Dimension+Lec+02", // Replace
+                gdriveId: "UNIT_DIM_LEC_02_ID" // Replace with ACTUAL ID for "Unit and Dimension_Lec_02"
+            }
+        ],
+         "UNIT_DIM_LEC_02_ID": [ // Related videos for "Unit and Dimension_Lec_02"
+             {
+                 title: "Unit and Dimension_Lec_01",
+                 author: "Shantanu Singh",
+                 thumbnailUrl: "https://via.placeholder.com/320x180.png?text=Unit+Dimension+Lec+01", // Replace
+                 gdriveId: "YOUR_FILE_ID_2" // Link back to U&D Lec 1
+             },
+             // Add more related videos if needed
+         ],
+        // Add entries for other video IDs (like YOUR_FILE_ID_RELATED_1) if they should have related videos too
+        "YOUR_FILE_ID_RELATED_1": [],
+    };
+    // ====================================================================
+    // --- END OF USER DATA SECTION ---
+    // ====================================================================
+
+
+    // --- Get URL Parameters ---
+    const params = new URLSearchParams(window.location.search);
+    const currentVideoId = params.get('gdriveId');
+    let videoTitle = params.get('title');
+
+    // --- Back Button Event Listener ---
+    if (backButton) {
+        backButton.addEventListener('click', () => {
+            history.back(); // Go to the previous page in history
         });
-        timelineList.appendChild(li);
-    });
-}
-
-function populateRelatedVideos(related) {
-    relatedVideosList.innerHTML = ''; // Clear loading/previous
-     if (!related || related.length === 0) {
-        relatedVideosList.innerHTML = '<li>No related videos available.</li>';
-        return;
+    } else {
+        console.warn("Back button element not found.");
     }
-    related.forEach(item => {
-        const li = document.createElement('li');
-        const link = document.createElement('a');
-        const title = (item.baseTitle || 'Related_Video').replace(/ /g, '_'); // Ensure title is URL-safe
-        link.href = `player.html?youtubeId=${item.youtubeId}&title=${title}`;
-        link.textContent = item.title;
-        li.appendChild(link);
-        relatedVideosList.appendChild(li);
-    });
-}
 
-function populateTabs(data) {
-    populateStudyMaterials(data?.studyMaterials); // Use optional chaining
-    populateTimeline(data?.timeline);
-    populateRelatedVideos(data?.relatedVideos);
-}
-
-// --- Data Fetching ---
-async function fetchVideoData() {
-    if (!youtubeId) return; // Don't fetch if no ID
-
-    // Clear previous errors before fetching
-    hideErrorMessage();
-    // Show loading state initially
-    studyMaterialList.innerHTML = '<li>Loading...</li>';
-    timelineList.innerHTML = '<li>Loading...</li>';
-    relatedVideosList.innerHTML = '<li>Loading...</li>';
-
-
-    try {
-        console.log("Fetching data from video_data.json");
-        const response = await fetch('video_data.json');
-         console.log("Fetch response status:", response.status);
-        if (!response.ok) {
-            // Be specific about the error
-            if(response.status === 404) {
-                 throw new Error(`video_data.json not found (404). Make sure it's in the same folder.`);
+    // --- Main Function to Load Page Content ---
+    function loadVideoContent() {
+        if (currentVideoId) {
+            // 1. Load Main Video
+            if (iframePlayer) {
+                const embedUrl = `https://drive.google.com/file/d/${currentVideoId}/preview`;
+                iframePlayer.setAttribute('src', embedUrl);
             } else {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                console.error("Video iframe element not found.");
             }
-        }
-        const jsonData = await response.json();
-        console.log("Successfully parsed Video_data.json");
 
-        currentVideoData = jsonData?.videos?.[youtubeId];
+            // 2. Set Page Title and Heading
+            if (videoTitle) {
+                try {
+                    // Decode '+' to space first, then decode URI components
+                    videoTitle = decodeURIComponent(videoTitle.replace(/\+/g, ' '));
+                } catch (e) {
+                    console.warn("Could not decode video title:", e);
+                    // Use the raw title if decoding fails
+                }
+            } else {
+                videoTitle = "Watch Video"; // Default title
+            }
+            if (pageTitleElement) pageTitleElement.textContent = videoTitle;
+            if (headingElement) headingElement.textContent = videoTitle;
 
-        if (currentVideoData) {
-            console.log("Data found for video ID:", youtubeId);
-            populateTabs(currentVideoData);
+            // 3. Hide Error Message (since we have an ID)
+            if (errorMessage) errorMessage.style.display = 'none';
+
+            // 4. Populate Dynamic Content Sections
+            populateStudyMaterials(currentVideoId);
+            populateRelatedVideos(currentVideoId);
+
         } else {
-            console.warn(`No specific data found in JSON for video ID: ${youtubeId}`);
-            showErrorMessage("Additional video data (study materials, etc.) not found for this ID.");
-             // Still clear loading states even if specific data isn't found
-             populateTabs({}); // Populate with empty data
+            // --- Handle Case Where No Video ID is Provided ---
+            console.error("No Google Drive File ID specified in URL parameter 'gdriveId'.");
+            if (videoContainer) videoContainer.style.display = 'none'; // Hide player
+            if (tabsContainer) tabsContainer.style.display = 'none'; // Hide tabs
+            if (errorMessage) {
+                 errorMessage.textContent = "Error: Video ID not found in URL. Cannot load video."; // More specific message
+                 errorMessage.style.display = 'block'; // Show error message
+            }
+            if (headingElement) headingElement.textContent = `Error: Video Not Found`;
+            if (pageTitleElement) pageTitleElement.textContent = "Error Loading Video";
+            // Display error messages in dynamic sections too
+            if (studyMaterialList) studyMaterialList.innerHTML = '<li class="no-material">Cannot load materials: Video ID missing.</li>';
+             if (relatedVideosContainer) relatedVideosContainer.innerHTML = '<p class="loading-placeholder">Cannot load related videos: Video ID missing.</p>';
         }
-    } catch (error) {
-        console.error('Error fetching or parsing Video_data.json:', error);
-        // Show the specific error message caught
-        showErrorMessage(`Error loading additional video data: ${error.message}`);
     }
-}
 
-// --- YouTube Player API ---
-// This function is called automatically by the YouTube IFrame API script
-window.onYouTubeIframeAPIReady = function() {
-    console.log("YouTube IFrame API Ready.");
-    if (youtubeId) {
-         console.log("Initializing YouTube player for ID:", youtubeId);
-         try {
-            playerPlaceholder.style.display = 'none'; // Hide placeholder
-            player = new YT.Player('youtube-player', {
-                height: '100%', // Let CSS handle sizing
-                width: '100%',
-                videoId: youtubeId,
-                playerVars: {
-                    'playsinline': 1, // Good for mobile
-                    'autoplay': 0,    // Don't autoplay by default
-                    'modestbranding': 1, // Less YouTube branding
-                    'rel': 0 // Don't show related videos at the end (we have our own tab)
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onError': onPlayerError
+    // --- Function to Populate Study Materials Tab ---
+    function populateStudyMaterials(videoId) {
+        if (!studyMaterialList) {
+            console.error("Study material list element not found.");
+            return;
+        }
+
+        const materials = studyMaterialsMap[videoId]; // Find materials using video ID
+        studyMaterialList.innerHTML = ''; // Clear existing list items
+
+        if (materials && Array.isArray(materials) && materials.length > 0) {
+            materials.forEach(doc => {
+                if (!doc || !doc.id || !doc.title) {
+                    console.warn("Skipping invalid study material entry:", doc);
+                    return; // Skip this invalid entry
+                }
+
+                const listItem = document.createElement('li');
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = doc.title;
+                listItem.appendChild(titleSpan);
+
+                const viewLink = document.createElement('a');
+                // Use Google Drive preview URL format
+                viewLink.href = `https://drive.google.com/file/d/${doc.id}/preview`;
+                viewLink.textContent = 'View';
+                viewLink.classList.add('view-button'); // Use the class defined in CSS
+                viewLink.setAttribute('target', '_blank'); // Open in new tab
+                viewLink.setAttribute('rel', 'noopener noreferrer'); // Security best practice
+                listItem.appendChild(viewLink);
+
+                studyMaterialList.appendChild(listItem);
+            });
+        } else {
+            // No materials found or empty array
+            const noMaterialItem = document.createElement('li');
+            noMaterialItem.textContent = 'No study materials available for this video.';
+            noMaterialItem.classList.add('no-material');
+            studyMaterialList.appendChild(noMaterialItem);
+        }
+    }
+
+    // --- Function to Populate Related Videos Tab ---
+    function populateRelatedVideos(videoId) {
+        if (!relatedVideosContainer) {
+            console.error("Related videos container element not found.");
+            return;
+        }
+
+        const relatedVids = relatedVideosMap[videoId]; // Find related videos for this ID
+        relatedVideosContainer.innerHTML = ''; // Clear existing content
+
+        if (relatedVids && Array.isArray(relatedVids) && relatedVids.length > 0) {
+            relatedVids.forEach(vid => {
+                if (!vid || !vid.gdriveId || !vid.title || !vid.author || !vid.thumbnailUrl) {
+                    console.warn("Skipping invalid related video entry:", vid);
+                    return; // Skip this invalid entry
+                }
+
+                // Create elements for the card
+                const cardDiv = document.createElement('div');
+                cardDiv.classList.add('related-video-card');
+
+                const img = document.createElement('img');
+                img.src = vid.thumbnailUrl;
+                img.alt = vid.title;
+                cardDiv.appendChild(img);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.classList.add('info');
+
+                const titleH4 = document.createElement('h4');
+                titleH4.textContent = vid.title;
+                infoDiv.appendChild(titleH4);
+
+                const authorP = document.createElement('p');
+                authorP.textContent = vid.author;
+                infoDiv.appendChild(authorP);
+
+                // --- Create Watch Button Link ---
+                const watchButton = document.createElement('a');
+                // Encode title for URL - handles spaces and special characters
+                const encodedTitle = encodeURIComponent(vid.title);
+                // Construct the URL for the player page
+                watchButton.href = `player.html?gdriveId=${vid.gdriveId}&title=${encodedTitle}`;
+                watchButton.classList.add('related-watch-button'); // Defined in CSS
+                watchButton.textContent = 'Watch Now';
+                infoDiv.appendChild(watchButton);
+                // --- End Watch Button Link ---
+
+                cardDiv.appendChild(infoDiv);
+                relatedVideosContainer.appendChild(cardDiv);
+            });
+        } else {
+            // No related videos found
+            const noVidsMessage = document.createElement('p');
+            noVidsMessage.textContent = 'No related videos available.';
+            noVidsMessage.classList.add('loading-placeholder'); // Reuse style
+            relatedVideosContainer.appendChild(noVidsMessage);
+        }
+    }
+
+    // --- Tab Switching Logic ---
+    if (tabsContainer && tabLinks.length > 0 && tabContents.length > 0) {
+        tabLinks.forEach(tab => {
+            tab.addEventListener('click', (event) => {
+                event.preventDefault(); // Prevent default anchor behavior if href="#"
+                const targetTabId = tab.getAttribute('data-tab');
+                if (!targetTabId) {
+                    console.warn("Tab link missing data-tab attribute.");
+                    return;
+                }
+
+                // Deactivate all tabs and content panels
+                tabLinks.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                // Activate the clicked tab and its corresponding content panel
+                tab.classList.add('active');
+                const targetContent = document.getElementById(targetTabId + '-content');
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                } else {
+                    console.warn(`Content panel not found for tab ID: ${targetTabId}-content`);
                 }
             });
-            console.log("YT.Player object created (async). Waiting for onReady event.");
-        } catch (e) {
-             console.error("Error creating YT.Player:", e);
-             showErrorMessage("Failed to initialize the YouTube player.", true);
+        });
+        // Ensure the first tab is active by default on load
+        if (tabLinks[0] && !tabsContainer.querySelector('.tab-link.active')) {
+            tabLinks[0].click(); // Simulate a click on the first tab
         }
 
     } else {
-        console.error("onYouTubeIframeAPIReady called, but no youtubeId is set.");
-        showErrorMessage("Cannot load video: No Video ID provided in the URL.", true);
+        console.warn("Tab elements (container, links, or content) not found or incomplete. Tab switching disabled.");
     }
-};
 
-function onPlayerReady(event) {
-    // Player is ready to be used
-    console.log("Player Ready. State:", event.target.getPlayerState());
-     // You could potentially autoplay here if desired:
-     // event.target.playVideo();
-}
-
-function onPlayerError(event) {
-    // Handle player errors (e.g., video unavailable, embedding disabled)
-    console.error("YouTube Player Error:", event.data);
-    let errorText = "An error occurred with the YouTube player.";
-    switch (event.data) {
-        case 2: errorText = "Player Error: Invalid video ID."; break;
-        case 5: errorText = "Player Error: HTML5 Player issue."; break;
-        case 100: errorText = "Player Error: Video not found or private."; break;
-        case 101:
-        case 150: errorText = "Player Error: Embedding disabled by the video owner."; break;
-    }
-     showErrorMessage(errorText, true); // Show error, mark as critical
-}
-
-
-// --- Event Listeners ---
-function setupEventListeners() {
-    // Tab Switching
-    tabsContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-button')) {
-            const targetTab = e.target.dataset.tab;
-
-            tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === targetTab));
-            tabPanes.forEach(pane => pane.classList.toggle('active', pane.id === targetTab));
-        }
-    });
-
-    // Dark/Light Mode Toggle
-    darkLightToggle.addEventListener('click', () => {
-        const currentTheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
-        applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
-        dropdownMenu.classList.remove('show'); // Close menu after selection
-    });
-
-    // Hamburger Menu Toggle
-    menuIcon.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent click from immediately closing menu
-        dropdownMenu.classList.toggle('show');
-    });
-
-    // Close dropdown if clicking outside
-    document.addEventListener('click', (e) => {
-        if (!menuIcon.contains(e.target) && !dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.remove('show');
-        }
-    });
-
-     // Note: Timeline item clicks are handled when items are created in populateTimeline
-}
-
-// --- Initialization ---
-function initializePage() {
-    console.log("Initializing page...");
-    // 1. Get URL parameters
-    const queryParams = getQueryParams();
-    youtubeId = queryParams.youtubeId; // Assign to global variable
-    videoTitle = queryParams.title ? queryParams.title.replace(/_/g, ' ') : 'Video Player';
-
-     console.log("Parsed URL Params:", { youtubeId, videoTitle });
-
-    // 2. Update page title and header
-    videoTitleHeader.textContent = videoTitle;
-    document.title = videoTitle;
-
-    // 3. Set dynamic Old Player link (do this early)
-    if (youtubeId) {
-        oldPlayerLink.href = `Playerold.html?youtubeId=${youtubeId}`;
-         console.log("Set Old Player link href:", oldPlayerLink.href);
+    // --- Placeholder Star Rating Interaction ---
+    if (ratingStars.length > 0) {
+        ratingStars.forEach((star, index) => {
+            star.addEventListener('click', () => {
+                // Remove 'selected' from all stars first
+                ratingStars.forEach(s => s.classList.remove('selected'));
+                // Add 'selected' up to the clicked star (index is 0-based)
+                for (let i = 0; i <= index; i++) {
+                    if(ratingStars[i]) ratingStars[i].classList.add('selected');
+                }
+                const rating = index + 1;
+                console.log(`Rated: ${rating} stars`); // Demo output
+                // In a real app, you would send 'rating' to a backend here.
+            });
+        });
     } else {
-         oldPlayerLink.href = '#'; // No ID, link is disabled essentially
-         oldPlayerLink.style.pointerEvents = 'none'; // Disable clicking
-         oldPlayerLink.style.opacity = '0.6';
-         console.warn("Old Player link disabled: No youtubeId.");
+        console.warn("Rating star elements not found.");
     }
 
+    // --- Initial Load ---
+    // Call the main function to start loading content when the DOM is ready.
+    loadVideoContent();
 
-    // 4. Apply saved theme or default
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    applyTheme(savedTheme);
-     console.log("Applied theme:", savedTheme);
-
-    // 5. Setup event listeners
-    setupEventListeners();
-     console.log("Event listeners set up.");
-
-    // 6. Fetch additional video data (happens async)
-    fetchVideoData(); // This will run after basic setup
-
-     // 7. The YouTube API will call `onYouTubeIframeAPIReady` automatically
-     // Make sure the API script is loaded *before* this script in the HTML.
-     console.log("Page initialization complete. Waiting for YouTube API callback...");
-
-
-     // Add a check if the API ready function doesn't fire after a delay
-     setTimeout(() => {
-        if (!player && youtubeId && !errorMessageArea.classList.contains('show')) {
-            // If player hasn't initialized after a few seconds, and no other error shown
-            console.warn("YouTube API ready function may not have fired correctly.");
-            // We can't show an error specific to the API not loading easily,
-            // but ensure the placeholder reflects the state.
-            if (playerPlaceholder.textContent === 'Loading Player...') {
-                 playerPlaceholder.textContent = 'Player loading stalled. Check console.';
-                 playerPlaceholder.style.display = 'flex';
-            }
-        }
-     }, 5000); // Check after 5 seconds
-
-}
-
-// --- Run Initialization on DOMContentLoaded ---
-document.addEventListener('DOMContentLoaded', initializePage);
+}); // End of DOMContentLoaded

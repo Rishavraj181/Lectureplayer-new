@@ -3,107 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Player</title>
+    <title>Watch Video</title> <!-- Title will be updated by JS -->
+
+    <!-- Link to the external CSS file -->
     <link rel="stylesheet" href="player.css">
+
 </head>
-<body class="dark-mode"> <!-- Start in dark mode by default -->
+<body>
 
-    <header class="player-header">
-        <a href="javascript:history.back()" class="back-button">←</a>
-        <h1 id="video-title-header">Loading Title...</h1>
-        <div class="menu-container">
-            <div class="menu-icon" id="menu-icon">☰</div>
-            <div class="dropdown-menu" id="dropdown-menu">
-                 <button id="dark-light-toggle">Light Mode</button>
-                 <a href="#" id="old-player-link" class="menu-link-button">Old Player</a>
-                 <!-- Add more menu items here if needed -->
-            </div>
-        </div>
-    </header>
+    <div class="top-bar">
+        <button class="back-button" id="backBtn" title="Go Back">←</button>
+        <h1 class="video-title-h1">Loading...</h1>
+    </div>
 
-    <!-- Error Message Area -->
-    <div id="error-message-area"></div>
+    <div id="video-container">
+        <iframe id="gdrive-iframe" src="" allowfullscreen allow="autoplay"></iframe>
+    </div>
 
-    <main class="player-main">
-        <div class="video-section">
-            <div class="video-container">
-                <!-- YouTube Player Will Be Embedded Here -->
-                <div id="youtube-player-placeholder">Loading Player...</div>
-                <div id="youtube-player"></div>
-            </div>
-             <!-- Controls overlay removed -->
+    <div class="content-area">
+        <div class="tabs">
+            <button class="tab-link active" data-tab="notes">My Notes</button>
+            <button class="tab-link" data-tab="study-material">Study Material</button>
+            <button class="tab-link" data-tab="ratings">Ratings</button>
+            <button class="tab-link" data-tab="timeline">Timeline</button>
+            <button class="tab-link" data-tab="related-videos">Related videos</button>
         </div>
 
-        <div class="info-section">
-            <div class="tabs">
-                <button class="tab-button active" data-tab="study-material">Study Material</button>
-                <button class="tab-button" data-tab="my-notes">My Notes</button>
-                <button class="tab-button" data-tab="ratings">Ratings</button>
-                <button class="tab-button" data-tab="timeline">Timeline</button>
-                <button class="tab-button" data-tab="related-videos">Related Videos</button>
-            </div>
+        <div id="error-message">
+             Could not load video or resources. Please check IDs and sharing permissions.
+        </div>
 
-            <div class="tab-content">
-                <div id="study-material" class="tab-pane active">
-                    <h2>Study Material</h2>
-                    <ul id="study-material-list">
-                        <li>Loading...</li>
-                    </ul>
-                </div>
-                <div id="my-notes" class="tab-pane">
-                    <h2>My Notes</h2>
-                    <textarea placeholder="Write your notes here..."></textarea>
-                </div>
-                <div id="ratings" class="tab-pane">
-                    <h2>Ratings</h2>
-                    <p>Rating system coming soon.</p>
-                </div>
-                <div id="timeline" class="tab-pane">
-                    <h2>Timeline</h2>
-                    <ul id="timeline-list">
-                         <li>Loading...</li>
-                    </ul>
-                </div>
-                <div id="related-videos" class="tab-pane">
-                    <h2>Related Videos</h2>
-                    <ul id="related-videos-list">
-                         <li>Loading...</li>
-                    </ul>
-                </div>
+        <!-- Notes Tab Content -->
+        <div class="tab-content active" id="notes-content">
+            <h3>My Notes</h3>
+            <p>You have not added any notes yet.</p>
+             <button class="notes-buttons save-button" style="background-color: #e74c3c; border-color:#e74c3c;">+ Add Notes</button>
+             <p class="implementation-note">(Note saving requires backend or local storage, not implemented in this demo)</p>
+        </div>
+
+        <!-- Study Material Tab Content -->
+        <div class="tab-content" id="study-material-content">
+            <h3>Study Material</h3>
+            <ul id="study-material-list">
+                <li class="no-material">Loading study materials...</li>
+            </ul>
+        </div>
+
+        <!-- Ratings Tab Content -->
+        <div class="tab-content" id="ratings-content">
+             <h3>Rate this Video</h3>
+            <div class="star-rating">
+                <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
+            </div>
+             <p style="margin-top:10px;">Leave a comment (optional):</p>
+             <textarea placeholder="Your feedback..." style="width:100%; min-height: 60px; box-sizing: border-box;"></textarea>
+             <button class="notes-buttons save-button" style="background-color: #007bff; border-color: #007bff; margin-top: 10px;">Submit Rating</button>
+             <p class="implementation-note">(Rating submission requires backend, not implemented)</p>
+        </div>
+
+        <!-- Timeline Tab Content -->
+        <div class="tab-content" id="timeline-content">
+            <h3>Timeline / Chapters</h3>
+            <p>00:00 - Topic 1: Introduction</p>
+            <p>15:35 - Topic 2: Key Concepts</p>
+            <p>35:10 - Topic 3: Examples</p>
+            <p>55:00 - Q&A</p>
+            <p class="implementation-note">(Timestamps are placeholders)</p>
+        </div>
+
+        <!-- Related Videos Tab Content -->
+        <div class="tab-content" id="related-videos-content">
+             <h3>Related Videos</h3>
+            <div class="related-videos-grid" id="related-videos-container">
+                <p class="loading-placeholder">Loading related videos...</p>
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- IMPORTANT: Load YouTube API First -->
-    <script>
-      var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        // This global function is required by the YouTube API.
-        // It will be called automatically when the API script is loaded and ready.
-        function onYouTubeIframeAPIReady() {
-            console.log("YT API Ready Callback Fired");
-            // Ensure initializePlayer is defined before calling
-            if (typeof initializePlayer === 'function') {
-                 initializePlayer();
-            } else {
-                // Fallback if player.js hasn't loaded yet (unlikely with script at end)
-                console.warn("initializePlayer not found immediately, waiting for DOMContentLoaded");
-                document.addEventListener('DOMContentLoaded', () => {
-                     if (typeof initializePlayer === 'function') {
-                        initializePlayer();
-                     } else {
-                         console.error("FATAL: initializePlayer function still not found after DOMContentLoaded!");
-                         const errEl = document.getElementById('error-message');
-                         if(errEl) errEl.textContent = "Error loading player script. Cannot initialize player.";
-                     }
-                });
-            }
-        }
-    </script>
-    <!-- Custom Player Script -->
+    <!-- Link to the external JavaScript file -->
+    <!-- Place it at the end of body for better performance -->
     <script src="player.js"></script>
+
 </body>
 </html>
